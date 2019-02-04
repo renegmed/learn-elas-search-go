@@ -2,26 +2,42 @@ package main
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/csv"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"reflect"
 	"strconv"
 
 	"github.com/olivere/elastic"
 )
 
-type Tweet struct {
-	User    string `json:"user"`
-	Message string `json:"message"`
+const FIELD_TO_SEARCH = "topic"
+const PHRASE_TO_SEARCH = "line"
+
+type CsvLine struct {
+	topic  string
+	source string
+}
+
+type Content struct {
+	Topic   string `json:"topic"`
+	Content string `json:"content"`
 	Source  string `json:"source"`
 }
 
-func addToIndex(client *elastic.Client, id string, tweet Tweet) error {
+func check(e error) {
+	if e != nil {
+		panic(e)
+	}
+}
+
+func addToIndex(client *elastic.Client, id string, content Content) error {
 	_, err := client.Index().
-		Index("tweets").
+		Index("line").
 		Type("doc").
 		Id(id).
-		BodyJson(tweet).
+		BodyJson(content).
 		Refresh("wait_for").
 		Do(context.Background())
 	if err != nil {
@@ -30,51 +46,69 @@ func addToIndex(client *elastic.Client, id string, tweet Tweet) error {
 	return nil
 }
 
-const FIELD_TO_SEARCH = "message"
-const PHRASE_TO_SEARCH = "four"
-
 func main() {
+
+	file, err := os.Open("index_file.csv")
+	check(err)
+	defer file.Close()
+
+	lines, err := csv.NewReader(file).ReadAll()
+	check(err)
+
+	csvFiles := make([]CsvLine, len(lines)-1)
+
+	for _, line := range lines[1:] { // skip first line
+		//data := CsvLine{fmt.Sprintf("\"%v\"", line[0]), fmt.Sprintf("\"%v\"", line[1])}
+		data := new(CsvLine)
+		data.topic = line[0]
+		data.source = line[1]
+		csvFiles = append(csvFiles, *data)
+	}
+
+	// read each file and index their contents(lines)
+
+	content, err := ioutil.ReadFile("/Users/rene/learn/go-workspace/src/build-microservice-go/chapter3/main.go")
+	check(err)
+	//defer file.Close()
+	//fmt.Println(string(content))
+
+	// var fileLines []string
+
+	// scanner := bufio.NewScanner(content)
+
+	// scanner.Split(bufio.ScanLines)
+
+	// for scanner.Scan() {
+	// 	fileLines = append(fileLines, scanner.Text())
+	// }
+	// fmt.Println(fileLines)
+	// }
+
 	// Create a client
 	client, err := elastic.NewClient()
-	if err != nil {
-		// Handle error
-	}
+	check(err)
 
 	// Create an index
-	_, err = client.CreateIndex("tweets").Do(context.Background())
-	if err != nil {
-		// Handle error
-		panic(err)
-	}
+	_, err = client.CreateIndex("golang").Do(context.Background())
+	check(err)
 
-	tweets := []Tweet{
-		Tweet{User: "olivere", Message: "Take One", Source: "/user/file1.txt"},
-		Tweet{User: "olivere", Message: "Take Two", Source: "/user/file2.txt"},
-		Tweet{User: "olivere", Message: "Take Three", Source: "/user/file3.txt"},
-		Tweet{User: "olivere", Message: "Take Four", Source: "/user/file4.txt"},
-		Tweet{User: "olivere", Message: "Take Five", Source: "/user/file5.txt"},
-		Tweet{User: "olivere", Message: "Take Six", Source: "/user/file6.txt"},
-	}
+	content2 := Content{Topic: "golang", Content: string(content), Source: "/Users/rene/learn/go-workspace/src/build-microservice-go/chapter3/main.go"}
 
 	counter := 1
-	for _, tweet := range tweets {
-		addToIndex(client, strconv.Itoa(counter), tweet)
-		counter++
-	}
+
+	addToIndex(client, strconv.Itoa(counter), content2)
+
 	// Search with a term query
-	//termQuery := elastic.NewTermQuery("user", "olivere")
-	termQuery := elastic.NewTermQuery(FIELD_TO_SEARCH, PHRASE_TO_SEARCH)
+
+	termQuery := elastic.NewTermQuery("topic", "golang")
 	searchResult, err := client.Search().
-		Index("tweets").            // search in index "tweets"
-		Query(termQuery).           // specify the query
-		Sort("user.keyword", true). // sort by "user" field, ascending
-		From(0).Size(10).           // take documents 0-9
-		Pretty(true).               // pretty print request and response JSON
-		Do(context.Background())    // execute
-	if err != nil {
-		// Handle error
-		panic(err)
-	}
+		Index("golang").  // search in index "tweets"
+		Query(termQuery). // specify the query
+		//Sort("topic.keyword", true). // sort by "user" field, ascending
+		From(0).Size(10).        // take documents 0-9
+		Pretty(true).            // pretty print request and response JSON
+		Do(context.Background()) // execute
+	check(err)
 
 	// searchResult is of type SearchResult and returns hits, suggestions,
 	// and all kinds of other information from Elasticsearch.
@@ -84,42 +118,39 @@ func main() {
 	// It makes sure you don't need to check for nil values in the response.
 	// However, it ignores errors in serialization. If you want full control
 	// over iterating the hits, see below.
-	var ttyp Tweet
+	var ttyp Content
 	for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
-		if t, ok := item.(Tweet); ok {
-			fmt.Printf("Tweet by %s: %s source: %s\n", t.User, t.Message, t.Source)
+		if c, ok := item.(Content); ok {
+			fmt.Printf("Source  source: %s\n", c.Source)
 		}
 	}
 	// TotalHits is another convenience function that works even when something goes wrong.
-	fmt.Printf("Found a total of %d tweets\n", searchResult.TotalHits())
+	fmt.Printf("Found a total of %d hits\n", searchResult.TotalHits())
 
-	// Here's how you iterate through results with full control over each step.
-	if searchResult.Hits.TotalHits > 0 {
-		fmt.Printf("Found a total of %d tweets\n", searchResult.Hits.TotalHits)
+	// // Here's how you iterate through results with full control over each step.
+	// if searchResult.Hits.TotalHits > 0 {
+	// 	fmt.Printf("Found a total of %d tweets\n", searchResult.Hits.TotalHits)
 
-		// Iterate through results
-		for _, hit := range searchResult.Hits.Hits {
-			// hit.Index contains the name of the index
+	// 	// Iterate through results
+	// 	for _, hit := range searchResult.Hits.Hits {
+	// 		// hit.Index contains the name of the index
 
-			// Deserialize hit.Source into a Tweet (could also be just a map[string]interface{}).
-			var t Tweet
-			err := json.Unmarshal(*hit.Source, &t)
-			if err != nil {
-				// Deserialization failed
-			}
+	// 		// Deserialize hit.Source into a Tweet (could also be just a map[string]interface{}).
+	// 		var t Tweet
+	// 		err := json.Unmarshal(*hit.Source, &t)
+	// 		if err != nil {
+	// 			// Deserialization failed
+	// 		}
 
-			// Work with tweet
-			fmt.Printf("Tweet by %s: %s\n", t.User, t.Message)
-		}
-	} else {
-		// No hits
-		fmt.Print("Found no tweets\n")
-	}
+	// 		// Work with tweet
+	// 		fmt.Printf("Tweet by %s: %s\n", t.User, t.Message)
+	// 	}
+	// } else {
+	// 	// No hits
+	// 	fmt.Print("Found no tweets\n")
+	// }
 
 	// Delete the index again
-	_, err = client.DeleteIndex("tweets").Do(context.Background())
-	if err != nil {
-		// Handle error
-		panic(err)
-	}
+	_, err = client.DeleteIndex("golang").Do(context.Background())
+	check(err)
 }

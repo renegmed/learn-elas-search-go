@@ -14,7 +14,7 @@ var clientReindexCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		f, _ := cmd.Flags().GetString("file")
-		util.Reindex(f)
+		util.Reindex(f, ".go")
 	},
 }
 

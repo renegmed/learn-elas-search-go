@@ -6,24 +6,47 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strconv"
+	"path/filepath"
+	"strings"
 
 	"github.com/olivere/elastic"
 )
 
-func Reindex(f string) {
+func Reindex(f, suffix string) {
+
 	csvFile, err := os.Open(f)
 	check(err)
 	defer csvFile.Close()
 	lines, err := csv.NewReader(csvFile).ReadAll()
 	check(err)
 
-	csvFiles := make([]CsvLine, 0)
+	csvLines := make([]CsvLine, 0)
 	for _, line := range lines[1:] { // skip first line
-		data := new(CsvLine)
-		data.topic = line[0]
-		data.source = line[1]
-		csvFiles = append(csvFiles, *data)
+
+		searchDir := line[1]
+
+		fileList := []string{}
+
+		err := filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
+			if suffix == "" {
+				fileList = append(fileList, path)
+			} else {
+				if strings.HasSuffix(path, suffix) {
+					fileList = append(fileList, path)
+				}
+			}
+
+			return nil
+		})
+
+		check(err)
+
+		for _, file := range fileList {
+			data := new(CsvLine)
+			data.topic = line[0]
+			data.source = file
+			csvLines = append(csvLines, *data)
+		}
 	}
 
 	ctx := context.Background()
@@ -46,25 +69,28 @@ func Reindex(f string) {
 			// Not acknowledged
 		}
 	}
-	counter := 1
+	//counter := 1
 	// read each file and index their contents(lines)
-	for _, f := range csvFiles {
+	for _, f := range csvLines {
 		byteContents, err := ioutil.ReadFile(f.source)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 			continue
 		}
 		content2 := Content{Topic: "golang", Content: string(byteContents), Source: f.source}
-		addToIndex(client, strconv.Itoa(counter), f.topic, content2)
-		counter++
+		//addToIndex(client, strconv.Itoa(counter), f.topic, content2)
+		addToIndex(client, f.topic, content2)
+		//counter++
+
+		fmt.Printf("Indexed: %s\n", f.source)
 	}
 }
 
-func addToIndex(client *elastic.Client, id string, topic string, content Content) error {
+func addToIndex(client *elastic.Client, topic string, content Content) error {
 	_, err := client.Index().
 		Index(topic).
 		Type("doc").
-		Id(id).
+		//Id(id).
 		BodyJson(content).
 		Refresh("wait_for").
 		Do(context.Background())

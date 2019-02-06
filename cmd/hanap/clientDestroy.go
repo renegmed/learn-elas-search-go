@@ -8,7 +8,7 @@ import (
 
 var index string
 
-// $ hanap client destroy index phrase -i golang
+// $ hanap client destroy index -i golang
 var clientDestroyCmd = &cobra.Command{
 	Use:   "destroy", // this is a sub-command
 	Short: "Client service: destroy index",

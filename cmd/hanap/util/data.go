@@ -1,8 +1,8 @@
 package util
 
 type CsvLine struct {
-	topic  string
-	source string
+	Topic  string
+	Source string
 }
 
 type Content struct {
@@ -11,7 +11,7 @@ type Content struct {
 	Source  string `json:"source"`
 }
 
-const mapping = `
+const Mapping = `
 {
 	"settings":{
 		"number_of_shards": 1,
@@ -21,12 +21,10 @@ const mapping = `
 		"doc":{
 			"properties":{
 				"topic":{
-					"type":"keyword"
+					"type":"text"
 				},
 				"content":{
-					"type":"text",
-					"store": true,
-					"fielddata": true
+					"type":"keyword" 
 				},
 				"source":{
 					"type":"text"

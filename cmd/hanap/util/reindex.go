@@ -43,8 +43,8 @@ func Reindex(f, suffix string) {
 
 		for _, file := range fileList {
 			data := new(CsvLine)
-			data.topic = line[0]
-			data.source = file
+			data.Topic = line[0]
+			data.Source = file
 			csvLines = append(csvLines, *data)
 		}
 	}
@@ -60,7 +60,7 @@ func Reindex(f, suffix string) {
 	}
 	if !exists {
 		// Create a new index.
-		createIndex, err := client.CreateIndex("golang").BodyString(mapping).Do(ctx)
+		createIndex, err := client.CreateIndex("golang").BodyString(Mapping).Do(ctx)
 		if err != nil {
 			// Handle error
 			panic(err)
@@ -72,17 +72,17 @@ func Reindex(f, suffix string) {
 	//counter := 1
 	// read each file and index their contents(lines)
 	for _, f := range csvLines {
-		byteContents, err := ioutil.ReadFile(f.source)
+		byteContents, err := ioutil.ReadFile(f.Source)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 			continue
 		}
-		content2 := Content{Topic: "golang", Content: string(byteContents), Source: f.source}
+		content2 := Content{Topic: "golang", Content: string(byteContents), Source: f.Source}
 		//addToIndex(client, strconv.Itoa(counter), f.topic, content2)
-		addToIndex(client, f.topic, content2)
+		addToIndex(client, f.Topic, content2)
 		//counter++
 
-		fmt.Printf("Indexed: %s\n", f.source)
+		fmt.Printf("Indexed: %s\n", f.Source)
 	}
 }
 

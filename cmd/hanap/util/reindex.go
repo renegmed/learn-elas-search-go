@@ -72,17 +72,20 @@ func Reindex(f, suffix string) {
 	//counter := 1
 	// read each file and index their contents(lines)
 	for _, f := range csvLines {
+
 		byteContents, err := ioutil.ReadFile(f.Source)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 			continue
 		}
+
 		content2 := Content{Topic: "golang", Content: string(byteContents), Source: f.Source}
 		//addToIndex(client, strconv.Itoa(counter), f.topic, content2)
 		addToIndex(client, f.Topic, content2)
 		//counter++
 
 		fmt.Printf("Indexed: %s\n", f.Source)
+
 	}
 }
 

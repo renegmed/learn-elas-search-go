@@ -5,8 +5,8 @@ import (
 	"testing"
 )
 
-// $ go test -run=TestBarrier/Correct_endpoints -v
-// $ go test -run=TestBarrier/One_endpoint_incorrect -v
+// $ go test -run=TestBarrier/Correct_processing -v >> results.txt
+
 func TestBarrier(t *testing.T) {
 
 	t.Run("Correct processing", func(t *testing.T) {
@@ -21,30 +21,4 @@ func TestBarrier(t *testing.T) {
 		// }
 		t.Log(result)
 	})
-
-	// t.Run("One endpoint incorrect", func(t *testing.T) {
-	// 	endpoints := []string{"http://malformed-url",
-	// 		"http://httpbin.org/User-Agent"}
-
-	// 	result := captureBarrierOutput(endpoints...)
-	// 	if !strings.Contains(result, "ERROR") {
-	// 		t.Fail()
-	// 	}
-
-	// 	t.Log(result)
-	// })
-
-	// t.Run("Very short timeout", func(t *testing.T) {
-	// 	endpoints := []string{"http://httpbin.org/headers",
-	// 		"http://httpbin.org/User-Agent"}
-	// 	timeoutMilliseconds = 1
-
-	// 	result := captureBarrierOutput(endpoints...)
-	// 	if !strings.Contains(result, "Timeout") {
-	// 		t.Fail()
-	// 	}
-
-	// 	t.Log(result)
-	// })
-
 }

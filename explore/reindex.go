@@ -26,13 +26,15 @@ const mapping = `
 		"number_of_replicas": 0
 	},
 	"mappings":{
-		"_doc":{
+		"doc":{
 			"properties":{
 				"topic":{
-					"type":"text"
+					"type":"keyword"
 				},
 				"content":{
-					"type":"keyword" 
+					"type":"text",
+					"store": true,
+					"fielddata": true
 				},
 				"source":{
 					"type":"text"
@@ -70,7 +72,7 @@ func captureBarrierOutput(f, suffix string) (string, error) {
 		fileList := []string{}
 
 		err := filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
-			if suffix == "" {
+			if strings.HasSuffix(searchDir, suffix) {
 				fileList = append(fileList, path)
 			} else {
 				if strings.HasSuffix(path, suffix) {
@@ -205,7 +207,7 @@ func processIndex(client *elastic.Client, csvLine util.CsvLine) error {
 func addToIndex(client *elastic.Client, topic string, content util.Content) error {
 	_, err := client.Index().
 		Index(topic).
-		Type("_doc").
+		Type("doc").
 		//Id(id).
 		BodyJson(content).
 		Refresh("true").

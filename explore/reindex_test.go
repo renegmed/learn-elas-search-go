@@ -21,4 +21,5 @@ func TestBarrier(t *testing.T) {
 		// }
 		t.Log(result)
 	})
+
 }

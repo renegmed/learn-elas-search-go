@@ -18,12 +18,12 @@ func Search(index, phrase string) error {
 
 	termQuery := elastic.NewMatchPhraseQuery("content", phrase)
 	searchResult, err := client.Search().
-		Index(index).                // search in index "tweets"
-		Query(termQuery).            // specify the query
-		Sort("topic.keyword", true). // sort by "topic" field, ascending
-		From(0).Size(10).            // take documents 0-9
-		Pretty(true).                // pretty print request and response JSON
-		Do(context.Background())     // execute
+		Index(index).     // search in index "tweets"
+		Query(termQuery). // specify the query
+		//Sort("topic.keyword", true). // sort by "topic" field, ascending
+		From(0).Size(10).        // take documents 0-9
+		Pretty(true).            // pretty print request and response JSON
+		Do(context.Background()) // execute
 	if err != nil {
 		return err
 	}

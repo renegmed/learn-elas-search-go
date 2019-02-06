@@ -18,7 +18,7 @@ const mapping = `
 		"number_of_replicas": 0
 	},
 	"mappings":{
-		"golang":{
+		"doc":{
 			"properties":{
 				"topic":{
 					"type":"keyword"

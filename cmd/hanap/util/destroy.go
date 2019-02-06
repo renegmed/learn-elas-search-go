@@ -20,7 +20,7 @@ func Destroy(index string) error {
 		return err
 	}
 
-	if !exists {
+	if exists {
 		// Delete an index.
 		deleteIndex, err := client.DeleteIndex(index).Do(ctx)
 		if err != nil {

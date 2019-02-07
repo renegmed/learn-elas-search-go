@@ -1,11 +1,7 @@
 package main
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 /*
@@ -43,14 +39,14 @@ func init() {
 	rootCmd.AddCommand(serverCmd)
 	rootCmd.AddCommand(clientCmd)
 
-	viper.SetDefault("location", os.Getenv("HOME"))
-	viper.SetConfigName("config") // refers to ./config.yaml file
-	viper.AddConfigPath(".")      // refers to ./config.yaml file
-	viper.ReadInConfig()
-	if err := viper.ReadInConfig(); err != nil {
-		fmt.Println("No configuration file found")
-	}
-	viper.SetDefault("location", os.Getenv("HOME")) // see pork.yaml file for 'location' setup. If none, this set to user's home directory
+	// viper.SetDefault("location", os.Getenv("HOME"))
+	// viper.SetConfigName("config") // refers to ./config.yaml file
+	// viper.AddConfigPath(".")      // refers to ./config.yaml file
+	// viper.ReadInConfig()
+	// if err := viper.ReadInConfig(); err != nil {
+	// 	fmt.Println("No configuration file found")
+	// }
+	// viper.SetDefault("location", os.Getenv("HOME")) // see pork.yaml file for 'location' setup. If none, this set to user's home directory
 }
 
 func check(e error) {

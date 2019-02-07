@@ -48,3 +48,37 @@ func Search(index, phrase string) error {
 
 	return nil
 }
+
+func SearchWithReturn(index, phrase string) ([]string, error) {
+
+	// Create a elasticsearch client
+	client, err := elastic.NewClient()
+	if err != nil {
+		return nil, err
+	}
+
+	termQuery := elastic.NewMatchPhraseQuery("content", phrase)
+	searchResult, err := client.Search().
+		Index(index).     // search in index "tweets"
+		Query(termQuery). // specify the query
+		//Sort("topic.keyword", true). // sort by "topic" field, ascending
+		From(0).Size(10).        // take documents 0-9
+		Pretty(true).            // pretty print request and response JSON
+		Do(context.Background()) // execute
+	if err != nil {
+		return nil, err
+	}
+
+	sourceList := []string{}
+
+	var ttyp Content
+	fmt.Printf("Phrase: %s\n", phrase)
+	for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
+		if c, ok := item.(Content); ok {
+			fmt.Printf("%s\n", c.Source)
+			sourceList = append(sourceList, c.Source)
+		}
+	}
+
+	return sourceList, nil
+}

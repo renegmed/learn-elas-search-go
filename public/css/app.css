@@ -1,0 +1,28 @@
+.title h1,
+.title h2 {
+  text-align: center;
+}
+html,
+body {
+  height: 100%;
+  position: relative;
+}
+.btn {
+  color: #333;
+}
+.btn.primary {
+  background-color: #51b11d;
+  color: white;
+}
+.btn.primary:hover {
+  background-color: #65db26;
+  color: white;
+}
+.btn.primary-lighten-1 {
+  background-color: #b9e0a5;
+  color: #333;
+}
+.btn.primary-lighten-1:hover {
+  background-color: #9bd37f;
+  color: #333;
+}

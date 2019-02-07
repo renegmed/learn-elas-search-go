@@ -21,10 +21,12 @@ const Mapping = `
 		"doc":{
 			"properties":{
 				"topic":{
-					"type":"text"
+					"type":"keyword"
 				},
 				"content":{
-					"type":"keyword" 
+					"type":"text",
+					"store": true,
+					"fielddata": true
 				},
 				"source":{
 					"type":"text"

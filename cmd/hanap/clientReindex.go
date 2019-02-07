@@ -2,6 +2,7 @@ package main
 
 import (
 	"elasticsearch-olivere/cmd/hanap/util"
+	"fmt"
 
 	"github.com/spf13/cobra"
 )
@@ -14,7 +15,13 @@ var clientReindexCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		f, _ := cmd.Flags().GetString("file")
-		util.Reindex(f, ".go")
+		result, err := util.Reindex(f, ".go")
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Printf("%s", result)
+		}
+
 	},
 }
 

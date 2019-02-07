@@ -1,0 +1,36 @@
+{{template "pageStart.html" .}}
+<div class="main-menu"> 
+    <form class="form-horizontal" method="post">
+      
+        <div class="row form-group">
+            <label for="index" class="col-lg-2 control-label text-right">Index</label>
+            <div class="col-lg-2">
+              <select name="index" id="index" class="form-control">
+                <option value="golang">Golang</option>
+                <option value="react">React</option> 
+              </select>
+            </div>
+        </div>
+
+      <div class="row form-group">
+        <label for="phrase" class="col-lg-2 control-label text-right">Phrase</label>
+        <div class="col-lg-2">
+          <input type="text" id="phrase" name="phrase" class="form-control">
+        </div> 
+      </div> 
+
+      <div class="col-lg-3 col-lg-offset-8">
+        <button type="submit" class="btn btn-lg admin-primary">Search Now</button>
+      </div>
+    </form> 
+   
+    {{range .SearchContents}}
+       <div class="row col-lg-12">
+            <div> 
+                <div><b>Index:</b> {{.Index}} <b>Phrase:</b> {{.Phrase}} <b>SOURCE:</b> {{.Source}}</div>  
+            </div>
+            <textarea cols="120" rows="12" disabled>{{.Content}}</textarea> 
+       </div>
+    {{end}}
+</div>
+{{template "pageEnd.html" .}}

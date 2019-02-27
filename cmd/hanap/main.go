@@ -11,13 +11,13 @@ import (
  $ hanap server start
  $ hanap server stop
  $ hanap server --help
-
- $ hanap client reindex
- $ hanap client destroy
- $ hanap client --help
-
- $ hanap client search --topic xxxx --phrase 'xxxx xxxx xxxx'
-
+ $
+ $ hanap client search index phrase -i golang -p '8080'
+ $ hanap client destroy index -i golang
+ $ hanap client reindex file -f ./index_file_go.csv -i golang -s .go
+ $ hanap client reindex file -f ./index_file_solidity.csv -i solidity -s .sol
+ $ hanap client reindex file -f ./index_file_rust.csv -i rust -s .rs
+ $
 */
 
 // Cobra is both a library for creating powerful modern CLI

@@ -7,7 +7,9 @@
             <div class="col-lg-2">
               <select name="index" id="index" class="form-control">
                 <option value="golang">Golang</option>
-                <option value="react">React</option> 
+                <option value="rust">Rust</option> 
+                <option value="javascript">Javascript</option>
+                <option value="solidity">Solidity</option>   
               </select>
             </div>
         </div>
@@ -27,7 +29,7 @@
     {{range .SearchContents}}
        <div class="row col-lg-12">
             <div> 
-                <div><b>Index:</b> {{.Index}} <b>Phrase:</b> {{.Phrase}} <b>SOURCE:</b> {{.Source}}</div>  
+                <div><b>{{.ItemNum}}.</b><b>Index:</b> {{.Index}} <b>Phrase:</b> {{.Phrase}} <b>SOURCE:</b> {{.Source}}</div>  
             </div>
             <textarea cols="120" rows="12" disabled>{{.Content}}</textarea> 
        </div>

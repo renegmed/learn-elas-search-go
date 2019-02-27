@@ -10,6 +10,7 @@ import (
 )
 
 type content struct {
+	ItemNum int
 	Phrase  string
 	Index   string
 	Source  string
@@ -34,7 +35,13 @@ func RegisterRoutes() *gin.Engine {
 
 		fmt.Printf(" index: %s  phrase: %s\n", index, phrase)
 
-		files, err := util.SearchWithReturn(index, phrase)
+		searcher, err := util.NewSearcher()
+		if err != nil {
+			c.HTML(http.StatusOK, "error.html", nil)
+		}
+		files, err := searcher.Search(index, phrase)
+
+		//files, err := util.SearchWithReturn(index, phrase)
 		if err != nil {
 			c.HTML(http.StatusOK, "error.html", nil)
 		}
@@ -43,7 +50,7 @@ func RegisterRoutes() *gin.Engine {
 
 		contents := []content{}
 
-		for _, filePath := range files {
+		for idx, filePath := range files {
 
 			byteContents, err := ioutil.ReadFile(filePath)
 			if err != nil {
@@ -52,6 +59,7 @@ func RegisterRoutes() *gin.Engine {
 			}
 
 			_content := content{
+				ItemNum: idx + 1,
 				Phrase:  phrase,
 				Index:   index,
 				Source:  filePath,

@@ -16,7 +16,12 @@ var clientDestroyCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		index, _ := cmd.Flags().GetString("index")
 
-		err := util.Destroy(index)
+		searcher, err := util.NewSearcher()
+		if err != nil {
+			check(err)
+		}
+		err = searcher.Destroy(index)
+		//err := util.Destroy(index)
 		check(err)
 	},
 }

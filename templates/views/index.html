@@ -10,6 +10,8 @@
                 <option value="rust">Rust</option> 
                 <option value="javascript">Javascript</option>
                 <option value="solidity">Solidity</option>   
+                <option value="pdf">PDF</option> 
+                <option value="web">Web</option> 
               </select>
             </div>
         </div>
@@ -29,7 +31,7 @@
     {{range .SearchContents}}
        <div class="row col-lg-12">
             <div> 
-                <div><b>{{.ItemNum}}.</b><b>Index:</b> {{.Index}} <b>Phrase:</b> {{.Phrase}} <b>SOURCE:</b> {{.Source}}</div>  
+                <div><b>{{.ItemNum}}.</b><b>Index:</b> {{.Index}} <b>Phrase:</b> {{.Phrase}} <b>SOURCE:</b> {{if .IsWeb}}<a href={{.Source}}>{{.Source}}</a> {{else}} {{.Source}} {{end}}</div>  
             </div>
             <textarea cols="120" rows="12" disabled>{{.Content}}</textarea> 
        </div>

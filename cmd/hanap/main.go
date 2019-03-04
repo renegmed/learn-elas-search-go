@@ -15,8 +15,14 @@ import (
  $ hanap client search index phrase -i golang -p '8080'
  $ hanap client destroy index -i golang
  $ hanap client reindex file -f ./index_file_go.csv -i golang -s .go
+ $ hanap client destroy index -i solidity
  $ hanap client reindex file -f ./index_file_solidity.csv -i solidity -s .sol
+ $ hanap client destroy index -i rust
  $ hanap client reindex file -f ./index_file_rust.csv -i rust -s .rs
+ $ hanap client destroy index -i pdf
+ $ hanap client reindex file -f ./index_file_pdf.csv -i pdf -s .pdf
+ $ hanap client destroy index -i web
+ $ hanap client reindex file -f ./index_file_web.csv -i web -s web
  $
 */
 

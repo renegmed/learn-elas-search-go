@@ -174,6 +174,10 @@ func walkFileList(lines [][]string, suffix string) ([]CsvLine, error) {
 				return nil
 			}
 
+			if strings.Contains(path, "/vendor/") {
+				return nil
+			}
+
 			if strings.HasSuffix(searchDir, suffix) {
 				fileList = append(fileList, path)
 			} else {

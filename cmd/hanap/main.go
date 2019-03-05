@@ -23,6 +23,9 @@ import (
  $ hanap client reindex file -f ./index_file_pdf.csv -i pdf -s .pdf
  $ hanap client destroy index -i web
  $ hanap client reindex file -f ./index_file_web.csv -i web -s web
+ $ hanap client destroy index -i note
+ $ hanap client reindex file -f ./index_file_note.csv -i note -s .txt
+ $ hanap client reindex file -f ./index_file_note.csv -i note -s .md
  $
 */
 

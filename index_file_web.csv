@@ -13,3 +13,4 @@ Topic,Source
 "web","https://serverless.com/blog/framework-example-golang-lambda-support/"
 "web","https://serverless.com/blog/dynamodb-backend-crudl-example-using-golang/" 
 "web","https://rustwasm.github.io/book/game-of-life/hello-world.html"
+"web","https://dave.cheney.net/practical-go/presentations/qcon-china.html"

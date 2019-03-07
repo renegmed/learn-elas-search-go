@@ -17,6 +17,7 @@ import (
  $ hanap client reindex file -f ./index_file_go.csv -i golang -s .go
  $ hanap client destroy index -i solidity
  $ hanap client reindex file -f ./index_file_solidity.csv -i solidity -s .sol
+ $ hanap client reindex file -f ./index_file_solidity_js.csv -i solidity -s .js
  $ hanap client destroy index -i rust
  $ hanap client reindex file -f ./index_file_rust.csv -i rust -s .rs
  $ hanap client destroy index -i pdf

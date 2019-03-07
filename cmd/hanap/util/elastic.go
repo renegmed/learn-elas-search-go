@@ -178,6 +178,14 @@ func walkFileList(lines [][]string, suffix string) ([]CsvLine, error) {
 				return nil
 			}
 
+			if strings.Contains(path, "/Godeps") {
+				return nil
+			}
+
+			if strings.Contains(path, "/node_modules") {
+				return nil
+			}
+
 			if strings.HasSuffix(searchDir, suffix) {
 				fileList = append(fileList, path)
 			} else {

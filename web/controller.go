@@ -7,7 +7,10 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os/exec"
+	"sort"
 	"strings"
+	"sync"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gin-gonic/gin"
@@ -21,6 +24,18 @@ type content struct {
 	Source  string
 	Content string
 	IsWeb   bool
+	IsPdf   bool
+}
+
+type header struct {
+	Phrase       string
+	IsWeb        bool
+	IsPdf        bool
+	IsGolang     bool
+	IsRust       bool
+	IsJavascript bool
+	IsSolidity   bool
+	IsNote       bool
 }
 
 func RegisterRoutes() *gin.Engine {
@@ -30,17 +45,44 @@ func RegisterRoutes() *gin.Engine {
 	r.LoadHTMLGlob("templates/**/*.html")
 
 	r.GET("/", func(c *gin.Context) {
+		pdfFiles, _ := c.GetPostFormMap("pdfFile")
+
+		fmt.Printf("pdfFile: %v \n", pdfFiles)
+
 		c.HTML(http.StatusOK, "index.html", nil)
 	})
 
 	r.POST("/", func(c *gin.Context) {
-		//fmt.Println("+++++ Search Now ++++")
+
+		var IsGolang = false
+		var IsWeb = false
+		var IsPdf = false
+		var IsRust = false
+		var IsJavascript = false
+		var IsSolidity = false
+		var IsNote = false
 
 		index := c.PostForm("index")
 		phrase := c.PostForm("phrase")
 
-		fmt.Printf(" index: %s  phrase: %s\n", index, phrase)
+		// fmt.Printf(" index: %s  phrase: %s ", index, phrase)
 
+		switch index {
+		case "golang":
+			IsGolang = true
+		case "web":
+			IsWeb = true
+		case "pdf":
+			IsPdf = true
+		case "rust":
+			IsRust = true
+		case "javascript":
+			IsJavascript = true
+		case "solidity":
+			IsSolidity = true
+		case "note":
+			IsSolidity = true
+		}
 		searcher, err := util.NewSearcher()
 		if err != nil {
 			c.HTML(http.StatusOK, "error.html", nil)
@@ -58,10 +100,12 @@ func RegisterRoutes() *gin.Engine {
 
 		for idx, filePath := range files {
 			var isWeb = false
+			var isPdf = false
 			var fileContent string
 
 			if strings.HasSuffix(filePath, ".pdf") {
 				fileContent, err = readPdf(filePath)
+				isPdf = true
 			} else if strings.HasPrefix(filePath, "http") {
 				isWeb = true
 				fileContent, err = readHtml(filePath)
@@ -85,14 +129,52 @@ func RegisterRoutes() *gin.Engine {
 				Source:  filePath,
 				Content: fileContent,
 				IsWeb:   isWeb,
+				IsPdf:   isPdf,
 			}
-
-			// fmt.Printf(" content.content: %s\n", _content.Content)
 			contents = append(contents, _content)
 		}
 
+		// sort contents
+		sort.Slice(contents, func(i, j int) bool {
+			return contents[i].Source < contents[j].Source
+		})
+
+		numberedContents := []content{}
+		for i, content := range contents {
+			content.ItemNum = i + 1
+			numberedContents = append(numberedContents, content)
+		}
+
+		pdfFile := c.PostForm("pdfFile")
+		if len(pdfFile) > 0 {
+			var waitGroup sync.WaitGroup
+			waitGroup.Add(1)
+			go func() {
+				waitGroup.Done()
+				if len(pdfFile) > 0 {
+					err := openPdfFile(pdfFile)
+					if err != nil {
+						fmt.Printf("%v\n", err)
+					}
+				}
+			}()
+			waitGroup.Wait()
+		}
+
+		//fmt.Printf("+++ calling c.HTML() len(numberedContents): %d\n", len(numberedContents))
+
+		header := header{
+			Phrase:       phrase,
+			IsWeb:        IsWeb,
+			IsPdf:        IsPdf,
+			IsGolang:     IsGolang,
+			IsRust:       IsRust,
+			IsJavascript: IsJavascript,
+			IsSolidity:   IsSolidity,
+			IsNote:       IsNote,
+		}
 		c.HTML(http.StatusOK, "index.html",
-			gin.H{"SearchContents": contents})
+			gin.H{"SearchContents": numberedContents, "Header": header})
 
 	})
 	return r
@@ -163,8 +245,8 @@ func readPdf(path string) (string, error) {
 		if err != nil {
 			continue
 		}
-		fmt.Printf("-------------------------------------------\n")
-		fmt.Printf("%s\n", pdfPageContent)
+		// fmt.Printf("-------------------------------------------\n")
+		// fmt.Printf("%s\n", pdfPageContent)
 
 		textBuilder.WriteString("-------------------------------------------\n")
 		textBuilder.WriteString(pdfPageContent + "\n")
@@ -183,4 +265,9 @@ func readPdf(path string) (string, error) {
 	}
 	return textBuilder.String(), nil
 	//return "", nil
+}
+
+func openPdfFile(file string) error {
+	cmd := exec.Command("open", "-a", "Preview", file)
+	return cmd.Run()
 }

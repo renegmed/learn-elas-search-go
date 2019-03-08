@@ -36,6 +36,8 @@ type header struct {
 	IsJavascript bool
 	IsSolidity   bool
 	IsNote       bool
+	IsKubernetes bool
+	IsGoPackage  bool
 }
 
 func RegisterRoutes() *gin.Engine {
@@ -61,6 +63,8 @@ func RegisterRoutes() *gin.Engine {
 		var IsJavascript = false
 		var IsSolidity = false
 		var IsNote = false
+		var IsKubernetes = false
+		var IsGoPackage = false
 
 		index := c.PostForm("index")
 		phrase := c.PostForm("phrase")
@@ -82,7 +86,12 @@ func RegisterRoutes() *gin.Engine {
 			IsSolidity = true
 		case "note":
 			IsSolidity = true
+		case "kubernetes":
+			IsKubernetes = true
+		case "goPackage":
+			IsGoPackage = true
 		}
+
 		searcher, err := util.NewSearcher()
 		if err != nil {
 			c.HTML(http.StatusOK, "error.html", nil)
@@ -172,6 +181,8 @@ func RegisterRoutes() *gin.Engine {
 			IsJavascript: IsJavascript,
 			IsSolidity:   IsSolidity,
 			IsNote:       IsNote,
+			IsKubernetes: IsKubernetes,
+			IsGoPackage:  IsGoPackage,
 		}
 		c.HTML(http.StatusOK, "index.html",
 			gin.H{"SearchContents": numberedContents, "Header": header})

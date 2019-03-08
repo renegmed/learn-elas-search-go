@@ -15,6 +15,8 @@ import (
  $ hanap client search index phrase -i golang -p '8080'
  $ hanap client destroy index -i golang
  $ hanap client reindex file -f ./index_file_go.csv -i golang -s .go
+ $ hanap client destroy index -i gopackage
+ $ hanap client reindex file -f ./index_file_go_src.csv -i gopackage -s .go
  $ hanap client destroy index -i solidity
  $ hanap client reindex file -f ./index_file_solidity.csv -i solidity -s .sol
  $ hanap client reindex file -f ./index_file_solidity_js.csv -i solidity -s .js
@@ -27,6 +29,9 @@ import (
  $ hanap client destroy index -i note
  $ hanap client reindex file -f ./index_file_note.csv -i note -s .txt
  $ hanap client reindex file -f ./index_file_note.csv -i note -s .md
+ $ hanap client destroy index -i kubernetes
+ $ hanap client reindex file -f ./index_file_kubernetes.csv -i kubernetes -s .yml
+ $ hanap client reindex file -f ./index_file_kubernetes.csv -i kubernetes -s .yaml
  $
 */
 

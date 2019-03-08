@@ -5,16 +5,17 @@
        
         <div class="row form-group">
             <label for="index" class="col-lg-2 control-label text-right">Index</label>
-            <div class="col-lg-2">
-              {{ .Header.IsPdf }}
+            <div class="col-lg-2"> 
               <select name="index" id="index" class="form-control" >
                 <option {{if .Header.IsGolang }} selected {{end}} value="golang">Golang</option>
+                <option {{if .Header.IsGoPackage }} selected {{end}} value="gopackage">Go Package</option>  
                 <option {{if .Header.IsRust }} selected {{end}} value="rust">Rust</option> 
                 <option {{if .Header.IsJavascript }} selected {{end}} value="javascript">Javascript</option>
-                <option {{if .Header.IsSolidity }} selected {{end}} value="solidity">Solidity</option>   
+                <option {{if .Header.IsSolidity }} selected {{end}} value="solidity">Solidity</option>
+                <option {{if .Header.IsKubernetes }} selected {{end}} value="kubernetes">Kubernetes</option>  
                 <option {{if .Header.IsPdf }} selected {{end}} value="pdf">PDF</option> 
                 <option {{if .Header.IsWeb }} selected {{end}} value="web">Web</option>
-                <option {{if .Header.IsNote }} selected {{end}} value="note">Notes</option>  
+                <option {{if .Header.IsNote }} selected {{end}} value="note">Notes</option> 
               </select>
               
             </div>
@@ -35,7 +36,8 @@
     {{range .SearchContents}}
        <div class="row col-lg-12">
             <div> 
-                <div><b>{{.ItemNum}}.</b><b>Index:</b> {{.Index}} <b>Phrase:</b> {{.Phrase}} <b>SOURCE:</b> 
+                <div><b>{{.ItemNum}}.</b><b>Index:</b> {{.Index}} <b>Phrase:</b> {{.Phrase}}</div>
+                <div><b>SOURCE:</b> 
                   {{if .IsWeb}}
                     <a href={{.Source}}>{{.Source}}</a>  
                   {{else}} 

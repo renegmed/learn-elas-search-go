@@ -90,7 +90,9 @@ func (s *Searcher) Reindex(file, suffix, index string) (string, error) {
 
 	var fileList []CsvLine
 	csvFileList, err := csvFileList(file)
-
+	if err != nil {
+		return "", err
+	}
 	if suffix != "web" {
 		fileList, err = walkFileList(csvFileList, suffix)
 		if err != nil {
@@ -145,10 +147,11 @@ func csvFileList(file string) ([][]string, error) {
 
 func convertFileList(lines [][]string) []CsvLine {
 	csvLines := make([]CsvLine, 0)
+
 	for _, line := range lines[1:] { // skip first line
 		data := new(CsvLine)
 		data.Topic = line[0]
-		data.Source = line[1]
+		data.Source = strings.TrimSpace(line[1])
 		csvLines = append(csvLines, *data)
 	}
 	return csvLines

@@ -12,6 +12,16 @@ import (
  $ hanap server stop
  $ hanap server --help
  $
+ $ curl -XGET 'localhost:9200/_cat/indices?v&pretty'
+ $ curl -XGET 'localhost:9200/golang/_search?q=microservice&pretty'
+ $ curl -XGET 'localhost:9200/golang,note/_search?pretty' -d '
+  {
+	  "query" : { "match_all" : {} },
+	  "from" : 5,
+	  "size" : 3
+  }
+ '
+ $
  $ hanap client search index phrase -i golang -p '8080'
  $ hanap client destroy index -i golang
  $ hanap client reindex file -f ./index_file_go.csv -i golang -s .go

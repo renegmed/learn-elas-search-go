@@ -1,11 +1,13 @@
 .title h1,
-.title h2 {
+.title h2,
+.title h3 {
   text-align: center;
 }
 html,
 body {
   height: 100%;
   position: relative;
+  background-color: lightseagreen
 }
 .btn {
   color: #333;

@@ -18,13 +18,15 @@ import (
 )
 
 type content struct {
-	ItemNum int
-	Phrase  string
-	Index   string
-	Source  string
-	Content string
-	IsWeb   bool
-	IsPdf   bool
+	ItemNum      int
+	Phrase       string
+	Index        string
+	Source       string
+	Score        float32
+	Content      string
+	SearchMethod string
+	IsWeb        bool
+	IsPdf        bool
 }
 
 type header struct {
@@ -68,8 +70,9 @@ func RegisterRoutes() *gin.Engine {
 
 		index := c.PostForm("index")
 		phrase := c.PostForm("phrase")
+		searchMethod := c.PostForm("btn-search")
 
-		// fmt.Printf(" index: %s  phrase: %s ", index, phrase)
+		fmt.Printf(" index: %s  phrase: %s sorted: %s\n", index, phrase, searchMethod)
 
 		switch index {
 		case "golang":
@@ -96,7 +99,7 @@ func RegisterRoutes() *gin.Engine {
 		if err != nil {
 			c.HTML(http.StatusOK, "error.html", nil)
 		}
-		files, err := searcher.Search(index, phrase)
+		files, err := searcher.Search(index, phrase, searchMethod)
 
 		//files, err := util.SearchWithReturn(index, phrase)
 		if err != nil {
@@ -132,21 +135,24 @@ func RegisterRoutes() *gin.Engine {
 				panic(err)
 			}
 			_content := content{
-				ItemNum: idx + 1,
-				Phrase:  phrase,
-				Index:   index,
-				Source:  filePath,
-				Content: fileContent,
-				IsWeb:   isWeb,
-				IsPdf:   isPdf,
+				ItemNum:      idx + 1,
+				Phrase:       phrase,
+				Index:        index,
+				Source:       filePath,
+				Content:      fileContent,
+				SearchMethod: searchMethod,
+				IsWeb:        isWeb,
+				IsPdf:        isPdf,
 			}
 			contents = append(contents, _content)
 		}
 
 		// sort contents
-		sort.Slice(contents, func(i, j int) bool {
-			return contents[i].Source < contents[j].Source
-		})
+		if strings.Contains(searchMethod, "sorted") {
+			sort.Slice(contents, func(i, j int) bool {
+				return contents[i].Source < contents[j].Source
+			})
+		}
 
 		numberedContents := []content{}
 		for i, content := range contents {

@@ -38,19 +38,27 @@ func NewSearcher() (Searcher, error) {
 	}, nil
 
 }
-func (s *Searcher) Search(index, phrase string) ([]string, error) {
+func (s *Searcher) Search(index, phrase string, searchMethod string) ([]string, error) {
+
+	var termQuery elastic.Query
+
+	if strings.Contains(searchMethod, "prefix") {
+		termQuery = elastic.NewMatchPhrasePrefixQuery("content", phrase)
+	} else if strings.Contains(searchMethod, "fuzzy") {
+		termQuery = elastic.NewFuzzyQuery("content", phrase).Boost(1.5).Fuzziness(2).PrefixLength(0).MaxExpansions(100)
+	} else {
+		// all words must belong to a document
+		words := strings.Split(strings.Trim(phrase, " "), " ")
+		fmt.Printf("++++ words: %v\n", words)
+
+		tQuery := elastic.NewBoolQuery()
+
+		for _, word := range words {
+			termQuery = tQuery.Must(elastic.NewTermQuery("content", word))
+		}
+	}
 
 	//termQuery := elastic.NewMatchPhraseQuery("content", phrase)
-	//termQuery := elastic.NewMatchPhrasePrefixQuery("content", phrase)
-
-	words := strings.Split(strings.Trim(phrase, " "), " ")
-	fmt.Printf("++++ words: %v\n", words)
-
-	termQuery := elastic.NewBoolQuery()
-
-	for _, word := range words {
-		termQuery = termQuery.Must(elastic.NewTermQuery("content", word))
-	}
 
 	searchResult, err := s.client.Search().
 		Index(index).     // search in index "tweets"
@@ -66,7 +74,6 @@ func (s *Searcher) Search(index, phrase string) ([]string, error) {
 	sourceList := []string{}
 
 	var ttyp Content
-	fmt.Printf("Phrase: %s\n", phrase)
 	for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
 		if c, ok := item.(Content); ok {
 			//fmt.Printf("%s\n", c.Source)

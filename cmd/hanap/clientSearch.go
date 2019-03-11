@@ -20,7 +20,7 @@ var clientSearchCmd = &cobra.Command{
 		if err != nil {
 			check(err)
 		}
-		fileList, err := searcher.Search(index, phrase)
+		fileList, err := searcher.Search(index, phrase, "default")
 		if err != nil {
 			check(err)
 		}

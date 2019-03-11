@@ -41,7 +41,16 @@ func NewSearcher() (Searcher, error) {
 func (s *Searcher) Search(index, phrase string) ([]string, error) {
 
 	//termQuery := elastic.NewMatchPhraseQuery("content", phrase)
-	termQuery := elastic.NewMatchPhrasePrefixQuery("content", phrase)
+	//termQuery := elastic.NewMatchPhrasePrefixQuery("content", phrase)
+
+	words := strings.Split(strings.Trim(phrase, " "), " ")
+	fmt.Printf("++++ words: %v\n", words)
+
+	termQuery := elastic.NewBoolQuery()
+
+	for _, word := range words {
+		termQuery = termQuery.Must(elastic.NewTermQuery("content", word))
+	}
 
 	searchResult, err := s.client.Search().
 		Index(index).     // search in index "tweets"

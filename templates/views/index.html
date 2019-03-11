@@ -1,12 +1,18 @@
 {{template "pageStart.html" .}}
  
 <div class="main-menu"> 
-    <form class="form-horizontal" method="post">
-       
-        <div class="row form-group">
-            <label for="index" class="col-lg-2 control-label text-right">Index</label>
-            <div class="col-lg-2"> 
-              <select name="index" id="index" class="form-control" >
+  <form class="form-horizontal" method="post">
+    <div class="col-md-6">
+      <div class="row">  
+            <label for="phrase">Phrase</label>
+            <div>
+              <input type="text" id="phrase" name="phrase" class="form-control" value={{ .Header.Phrase}}>
+            </div>  
+      </div>
+      <div class="row">    
+            <label for="index">Index</label>
+            <div> 
+              <select name="index" id="index" class="browser-default custom-select" >
                 <option {{if .Header.IsGolang }} selected {{end}} value="golang">Golang</option>
                 <option {{if .Header.IsGoPackage }} selected {{end}} value="gopackage">Go Package</option>  
                 <option {{if .Header.IsRust }} selected {{end}} value="rust">Rust</option> 
@@ -16,43 +22,37 @@
                 <option {{if .Header.IsPdf }} selected {{end}} value="pdf">PDF</option> 
                 <option {{if .Header.IsWeb }} selected {{end}} value="web">Web</option>
                 <option {{if .Header.IsNote }} selected {{end}} value="note">Notes</option> 
-              </select>
-              
-            </div>
-        </div>
-
-      <div class="row form-group">
-        <label for="phrase" class="col-lg-2 control-label text-right">Phrase</label>
-        <div class="col-lg-2">
-          
-          <input type="text" id="phrase" name="phrase" class="form-control" value={{ .Header.Phrase}}>
-        </div> 
+              </select>              
+            </div> 
+            <button type="submit" class="btn btn-outline-primary" id="search">Search Now</button>
       </div> 
-
-      <div class="col-lg-3 col-lg-offset-8">
-        <button type="submit" class="btn btn-lg admin-primary" id="search">Search Now</button>
-      </div>
+    </div> 
+    <div class="col-md-6"></div>
      
-    {{range .SearchContents}}
-       <div class="row col-lg-12">
-            <div> 
-                <div><b>{{.ItemNum}}.</b><b>Index:</b> {{.Index}} <b>Phrase:</b> {{.Phrase}}</div>
-                <div><b>SOURCE:</b> 
-                  {{if .IsWeb}}
-                    <a href={{.Source}}>{{.Source}}</a>  
-                  {{else}} 
-                    {{if .IsPdf}}
-                    
-                      {{.Source}} <button  id="pdfFile" name="pdfFile" type="submit" value={{.Source}}>open with PDF viewer</button>
-                    
-                    {{else}} 
-                      {{.Source}} 
-                    {{end}}</div>  
-                  {{end}}</div>  
-            </div>
-            <textarea id={{.ItemNum}} cols="180" rows="24" style="font-family:Monaco;font-size: 10px;font-weight:bold;color:#003399;white-space:pre-wrap" disabled>{{.Content}}</textarea>  
+      
+    <div>
+      {{range .SearchContents}}
+        <div class="row col-lg-12">
+          <div> 
+            <div><b>{{.ItemNum}}.</b><b>Index:</b> {{.Index}} <b>Phrase:</b> {{.Phrase}}</div>
+            <div><b>SOURCE:</b> 
+              {{if .IsWeb}}
+                <a href={{.Source}}>{{.Source}}</a>  
+              {{else}} 
+                {{if .IsPdf}}
+                
+                  {{.Source}} <button  id="pdfFile" name="pdfFile" type="submit" value={{.Source}}>open with PDF viewer</button>
+                
+                {{else}} 
+                  {{.Source}} 
+                {{end}}</div>  
+              {{end}}</div>  
           </div>
-    {{end}}
+          <textarea id={{.ItemNum}} cols="180" rows="24" style="font-family:Monaco;font-size: 10px;font-weight:bold;color:#003399;white-space:pre-wrap" disabled>{{.Content}}</textarea>  
+        </div>
+      {{end}}
+    </div> 
+    
   </form> 
 </div>
 {{template "pageEnd.html" .}}

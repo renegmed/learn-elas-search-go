@@ -1,7 +1,7 @@
 package main
 
 import (
-	"elasticsearch-olivere/cmd/hanap/util"
+	"github.com/renegmed/learn-elas-search-go/cmd/hanap/util"
 
 	"github.com/spf13/cobra"
 )

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -15,7 +16,7 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
-	elastic "github.com/olivere/elastic"
+	elastic "github.com/olivere/elastic/v7"
 )
 
 type Searcher struct {
@@ -28,7 +29,7 @@ type ingestResp struct {
 }
 
 func NewSearcher() (Searcher, error) {
-	// Create a elasticsearch client
+
 	client, err := elastic.NewClient()
 	if err != nil {
 		return Searcher{}, err
@@ -76,7 +77,6 @@ func (s *Searcher) Search(index, phrase string, searchMethod string) ([]string, 
 	var ttyp Content
 	for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
 		if c, ok := item.(Content); ok {
-			//fmt.Printf("%s\n", c.Source)
 			sourceList = append(sourceList, c.Source)
 		}
 	}
@@ -111,6 +111,7 @@ func (s *Searcher) Reindex(file, suffix, index string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	if suffix != "web" {
 		fileList, err = walkFileList(csvFileList, suffix)
 		if err != nil {
@@ -120,20 +121,28 @@ func (s *Searcher) Reindex(file, suffix, index string) (string, error) {
 		fileList = convertFileList(csvFileList)
 	}
 
+	fmt.Println(fileList)
+
 	ctx := context.Background()
+
 	exists, err := s.client.IndexExists(index).Do(ctx)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Error on checking existence of index, %v", err)
 	}
 
 	if !exists {
 		createIndex, err := s.client.CreateIndex(index).Body(Mapping).Do(ctx)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("Error on creating new index, %v", err)
 		}
 		if !createIndex.Acknowledged {
 			// Not acknowledged
 		}
+	}
+
+	exists, err = s.client.IndexExists(index).Do(ctx)
+	if err != nil {
+		return "", fmt.Errorf("Error 2 on checking existence of index, %v", err)
 	}
 
 	messages := ingestFiles(s.client, fileList)
@@ -146,6 +155,7 @@ func (s *Searcher) Reindex(file, suffix, index string) (string, error) {
 		buffer.WriteString("\n")
 		count++
 	}
+
 	return buffer.String(), nil
 }
 
@@ -176,17 +186,9 @@ func convertFileList(lines [][]string) []CsvLine {
 }
 func walkFileList(lines [][]string, suffix string) ([]CsvLine, error) {
 	csvLines := make([]CsvLine, 0)
-	// csvFile, err := os.Open(file)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// defer csvFile.Close()
-	// lines, err := csv.NewReader(csvFile).ReadAll()
-	// if err != nil {
-	// 	return nil, err
-	// }
 
 	for _, line := range lines[1:] { // skip first line
+
 		searchDir := line[1]
 		fileList := []string{}
 		err := filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
@@ -263,7 +265,7 @@ func processIndex(client *elastic.Client, csvLine CsvLine) error {
 
 		err = addToIndex(client, csvLine.Topic, content)
 		if err != nil {
-			return err
+			return fmt.Errorf("Error on add http document to index, %v", err)
 		}
 
 	} else {
@@ -277,18 +279,25 @@ func processIndex(client *elastic.Client, csvLine CsvLine) error {
 
 		err = addToIndex(client, csvLine.Topic, content)
 		if err != nil {
-			return err
+			return fmt.Errorf("Error on add file document to index, %v", err)
 		}
 	}
 	return nil
 }
 
 func addToIndex(client *elastic.Client, topic string, content Content) error {
-	_, err := client.Index().
+
+	dataJSON, err := json.Marshal(content)
+	if err != nil {
+		return fmt.Errorf("Error on content marshalling, %v", err)
+	}
+	js := string(dataJSON)
+
+	_, err = client.Index().
 		Index(topic).
-		Type("doc").
+		//Type("doc").
 		//Id(id).
-		BodyJson(content).
+		BodyJson(js).
 		Refresh("true").
 		Do(context.Background())
 	if err != nil {
@@ -304,7 +313,6 @@ func scrapeHtml(url string) (string, error) {
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
-		//log.Fatalf("status code error: %d %s", res.StatusCode, res.Status)
 		return "", fmt.Errorf("status code error: %d %s %s", res.StatusCode, res.Status, url)
 	}
 
@@ -324,7 +332,6 @@ func scrapeHtml(url string) (string, error) {
 
 	doc.Find("p").Each(func(i int, s *goquery.Selection) {
 		content := s.Text()
-		//fmt.Printf("Line %d: %s \n", i, content)
 		textBuilder.WriteString(content)
 	})
 

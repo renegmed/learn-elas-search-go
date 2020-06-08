@@ -2,7 +2,6 @@ package web
 
 import (
 	"bytes"
-	"elasticsearch-olivere/cmd/hanap/util"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -11,6 +10,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/renegmed/learn-elas-search-go/cmd/hanap/util"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gin-gonic/gin"

@@ -1,8 +1,17 @@
 
-build: 
+init-project:
+	go mod init github.com/renegmed/learn-elas-search-go
+.PHONY: init-project
+
+up:
+	docker-compose up --build -d 
+.PHONY: up
+
+build-web: 
 	if [ -a ./web.exe ]; then  rm ./web.exe; fi;   # remove main if it exists 
 	go build -o ./web.exe
 	./web.exe
+.PHONY: build-web 
 
 .PHONY: hanap
 hanap:  

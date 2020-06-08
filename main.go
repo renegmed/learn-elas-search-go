@@ -1,6 +1,6 @@
 package main
 
-import "elasticsearch-olivere/web"
+import "github.com/renegmed/learn-elas-search-go/web"
 
 func main() {
 	r := web.RegisterRoutes()

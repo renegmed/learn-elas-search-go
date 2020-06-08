@@ -1,8 +1,9 @@
 package main
 
 import (
-	"elasticsearch-olivere/cmd/hanap/util"
 	"fmt"
+
+	"github.com/renegmed/learn-elas-search-go/cmd/hanap/util"
 
 	"github.com/spf13/cobra"
 )
@@ -40,9 +41,9 @@ var clientReindexCmd = &cobra.Command{
 		//result, err := searcher.Reindex(f, ".go", "golang")
 		result, err := searcher.Reindex(f, suffix, indx)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("Error while reindex %s, %v\n", indx, err)
 		} else {
-			fmt.Printf("%s", result)
+			fmt.Printf("RESULT of reindexing, %s\n", result)
 		}
 
 	},

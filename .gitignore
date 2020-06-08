@@ -1,3 +1,7 @@
 *.txt
 vendor
 web.exe
+hanapweb.exe 
+index_file*
+.DS_Store
+esdata*

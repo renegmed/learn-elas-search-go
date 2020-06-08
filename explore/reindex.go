@@ -7,8 +7,8 @@ package explore
 import (
 	"bytes"
 	"context"
-	"elasticsearch-olivere/cmd/hanap/util"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -16,7 +16,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/olivere/elastic"
+	"github.com/renegmed/learn-elas-search-go/cmd/hanap/util"
+
+	elastic "gopkg.in/olivere/elastic.v7"
 )
 
 const mapping = `
@@ -113,6 +115,7 @@ func captureBarrierOutput(f, suffix string) (string, error) {
 		// Create a new index.
 		//createIndex, err := client.CreateIndex("doc").BodyString(util.Mapping).Do(ctx)
 		createIndex, err := client.CreateIndex("golang").Body(mapping).Do(ctx)
+
 		if err != nil {
 			return "", err
 		}
@@ -205,11 +208,21 @@ func processIndex(client *elastic.Client, csvLine util.CsvLine) error {
 }
 
 func addToIndex(client *elastic.Client, topic string, content util.Content) error {
+
+	fmt.Println("++++++++ 1.1 +++++++++")
+	dataJSON, err := json.Marshal(content)
+	if err != nil {
+		return fmt.Errorf("Error on content marshalling, %v", err)
+	}
+	js := string(dataJSON)
+
+	fmt.Println("++++++++ 1.2 +++++++++")
+
 	_, err := client.Index().
 		Index(topic).
 		Type("doc").
 		//Id(id).
-		BodyJson(content).
+		BodyJson(js).
 		Refresh("true").
 		Do(context.Background())
 	if err != nil {

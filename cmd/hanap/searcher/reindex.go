@@ -72,8 +72,6 @@ func (s *searcher) Reindex(file, suffix, index string) (string, error) {
 		return "", fmt.Errorf("Error 2 on checking existence of index, %v", err)
 	}
 
-	type token struct{}
-
 	var fileList []csvLine
 	csvFileList, err := csvFileList(file)
 	if err != nil {
@@ -88,55 +86,100 @@ func (s *searcher) Reindex(file, suffix, index string) (string, error) {
 		fileList = convertFileList(csvFileList)
 	}
 
-	messages := []string{}
+	fmt.Println("Point 0....file size..", len(fileList))
+
+	type token struct{}
+
 	sem := make(chan token, len(fileList))
+	batches := make(chan csvLine, len(fileList))
 
-	for _, f := range fileList {
-		sem <- token{}
-		go func(cline csvLine) {
-			resp := indexFile(s.client, cline)
-			if resp.err != nil {
-				//fmt.Println(resp.err)
-				messages = append(messages, fmt.Sprintf("%v", resp.err))
-			} else {
-				//fmt.Println("Index file response:,", resp.resp)
-				messages = append(messages, resp.resp)
-			}
+	for i, f := range fileList {
+		go func(cline csvLine, i int, limit int) {
+			batches <- cline
+			sem <- token{}
+		}(f, i, len(fileList)-1)
+	}
+
+	for i := len(fileList); i >= 0; i-- {
+		if i > 0 {
 			<-sem
-		}(f)
+		} else {
+			close(batches)
+		}
 	}
 
-	for n := len(fileList); n > 0; n-- {
-		sem <- token{}
-	}
+	messages := []ingestResp{}
 
+	batches2 := BatchCsvLine(batches, 200, 60000*time.Millisecond)
+	for {
+		select {
+		case files, ok := <-batches2:
+			if ok {
+				for _, f := range files {
+					resp := indexFile(s.client, f)
+					messages = append(messages, resp)
+				}
+			} else {
+				goto done
+			}
+		}
+	}
+done:
 	var buffer bytes.Buffer
 	count := 1
 	for _, message := range messages {
 		buffer.WriteString(strconv.Itoa(count))
 		buffer.WriteString(". ")
-		buffer.WriteString(message)
+		if message.err != nil {
+			buffer.WriteString(fmt.Sprintf("%v", message.err))
+		} else {
+			buffer.WriteString(message.resp)
+		}
+
 		buffer.WriteString("\n")
 		count++
 	}
+
 	return buffer.String(), nil
+
 }
 
-// func process(ctx context.Context, file csvFile, suffix, index string) (string, error) {
+func BatchCsvLine(cline <-chan csvLine, maxItems int, maxTimeout time.Duration) chan []csvLine {
+	batches := make(chan []csvLine)
 
-// 	messages := ingestFiles(s.client, fileList)
-// 	var buffer bytes.Buffer
-// 	count := 1
-// 	for _, message := range messages {
-// 		buffer.WriteString(strconv.Itoa(count))
-// 		buffer.WriteString(". ")
-// 		buffer.WriteString(message.Resp)
-// 		buffer.WriteString("\n")
-// 		count++
-// 	}
+	go func() {
+		defer close(batches) // stops receiving signal when the channel is closed
+		for keepGoing := true; keepGoing; {
+			var batch []csvLine
+			expire := time.After(maxTimeout) // expire is channel that receives a signal when timeout is reached
+			for {
+				select {
+				case value, ok := <-cline:
+					if !ok { // channel was closed
+						keepGoing = false // this flag causes to exit out of the loop
+						goto done
+					}
 
-// 	return buffer.String(), nil
-// }
+					batch = append(batch, value)
+					if len(batch) == maxItems { // max is reached before timeout, done, send the batch now regardless of content
+						goto done
+					}
+
+				case <-expire: // timeout reached before reaching maximum items
+					keepGoing = false
+					goto done // causes to send batches to channel, but continue into the loop
+				}
+			}
+
+		done:
+			if len(batch) > 0 {
+				batches <- batch
+			}
+		}
+	}()
+
+	return batches
+}
 
 func csvFileList(file string) ([][]string, error) {
 	csvFile, err := os.Open(file)
@@ -163,6 +206,7 @@ func convertFileList(lines [][]string) []csvLine {
 	}
 	return csvLines
 }
+
 func walkFileList(lines [][]string, suffix string) ([]csvLine, error) {
 	csvLines := make([]csvLine, 0)
 
@@ -210,67 +254,68 @@ func walkFileList(lines [][]string, suffix string) ([]csvLine, error) {
 	return csvLines, nil
 }
 
-// func ingestFiles(client *elastic.Client, files []csvLine) []ingestResp {
-// 	responses := []ingestResp{}
-// 	for _, file := range files {
-// 		resp := indexFile(client, file)
-// 		responses = append(responses, resp)
-// 	}
-// 	return responses
-// }
-
 func indexFile(client *elastic.Client, csvLine csvLine) ingestResp {
+
+	//fmt.Println("Index File")
 	res := ingestResp{}
-	err := processIndex(client, csvLine)
+	msg, err := processIndex(client, csvLine)
 	if err != nil {
 		res.err = err
 		res.resp = string(fmt.Sprintf("ERROR file: %s\n %v", csvLine.source, err))
 		return res
 	}
-	res.resp = string(fmt.Sprintf("file indexed: %s", csvLine.source))
+	res.resp = msg // string(fmt.Sprintf("file indexed: %s", csvLine.source))
+
+	// fmt.Println(res)
 	return res
 }
 
-func processIndex(client *elastic.Client, csvLine csvLine) error {
+func processIndex(client *elastic.Client, csvLine csvLine) (string, error) {
 
+	//fmt.Println("Process Index....")
 	if strings.HasPrefix(csvLine.source, "http") {
 		byteContents, err := scrapeHtml(csvLine.source)
 		if err != nil {
 			//fmt.Printf("%v\n", err)
-			return fmt.Errorf("Error while scraping html, %v", err)
+			return "", fmt.Errorf("Error while scraping html, %v", err)
 		}
 
 		content := Content{Topic: csvLine.topic, Content: string(byteContents), Source: csvLine.source}
 
-		err = addToIndex(client, csvLine.topic, content)
+		msg, err := addToIndex(client, csvLine.topic, content)
 		if err != nil {
-			return fmt.Errorf("Error on add http document to index, %v", err)
+			return "", fmt.Errorf("Error on add http document to index, %v", err)
 		}
+		return msg, nil
 
 	} else {
 		byteContents, err := ioutil.ReadFile(csvLine.source)
 		if err != nil {
 			//fmt.Printf("%v\n", err)
-			return fmt.Errorf("Error on reading file: %v", err)
+			return "", fmt.Errorf("Error on reading file: %v", err)
 		}
 
 		content := Content{Topic: csvLine.topic, Content: string(byteContents), Source: csvLine.source}
 
-		err = addToIndex(client, csvLine.topic, content)
+		msg, err := addToIndex(client, csvLine.topic, content)
 		if err != nil {
-			return fmt.Errorf("Error on add file document to index, %v", err)
+			return "", fmt.Errorf("Error on add file document to index, %v", err)
 		}
+
+		return msg, nil
 	}
-	return nil
+
 }
 
-func addToIndex(client *elastic.Client, topic string, content Content) error {
+func addToIndex(client *elastic.Client, topic string, content Content) (string, error) {
 
-	time.Sleep(100 * time.Millisecond)
+	//time.Sleep(100 * time.Millisecond)
+
+	//fmt.Println("Add to index:", content.Source)
 
 	dataJSON, err := json.Marshal(content)
 	if err != nil {
-		return fmt.Errorf("Error on content marshalling, %v", err)
+		return "", fmt.Errorf("Error on content marshalling, %v", err)
 	}
 	js := string(dataJSON)
 
@@ -282,9 +327,9 @@ func addToIndex(client *elastic.Client, topic string, content Content) error {
 		Refresh("true").
 		Do(context.Background())
 	if err != nil {
-		return fmt.Errorf("Error on es indexing, %v", err)
+		return "", fmt.Errorf("Error on es indexing, %v", err)
 	}
-	return nil
+	return fmt.Sprintf("Added to index: %s", content.Source), nil
 }
 
 func scrapeHtml(url string) (string, error) {

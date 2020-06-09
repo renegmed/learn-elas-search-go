@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	elastic "github.com/olivere/elastic/v7"
@@ -24,8 +25,8 @@ type csvLine struct {
 }
 
 type ingestResp struct {
-	Resp string
-	Err  error
+	resp string
+	err  error
 }
 
 func (s *searcher) Destroy(index string) error {
@@ -50,26 +51,7 @@ func (s *searcher) Destroy(index string) error {
 }
 
 func (s *searcher) Reindex(file, suffix, index string) (string, error) {
-
-	var fileList []csvLine
-	csvFileList, err := csvFileList(file)
-	if err != nil {
-		return "", err
-	}
-
-	if suffix != "web" {
-		fileList, err = walkFileList(csvFileList, suffix)
-		if err != nil {
-			return "", err
-		}
-	} else {
-		fileList = convertFileList(csvFileList)
-	}
-
-	fmt.Println(fileList)
-
 	ctx := context.Background()
-
 	exists, err := s.client.IndexExists(index).Do(ctx)
 	if err != nil {
 		return "", fmt.Errorf("Error on checking existence of index, %v", err)
@@ -90,19 +72,71 @@ func (s *searcher) Reindex(file, suffix, index string) (string, error) {
 		return "", fmt.Errorf("Error 2 on checking existence of index, %v", err)
 	}
 
-	messages := ingestFiles(s.client, fileList)
+	type token struct{}
+
+	var fileList []csvLine
+	csvFileList, err := csvFileList(file)
+	if err != nil {
+		return "", err
+	}
+	if suffix != "web" {
+		fileList, err = walkFileList(csvFileList, suffix)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		fileList = convertFileList(csvFileList)
+	}
+
+	messages := []string{}
+	sem := make(chan token, len(fileList))
+
+	for _, f := range fileList {
+		sem <- token{}
+		go func(cline csvLine) {
+			resp := indexFile(s.client, cline)
+			if resp.err != nil {
+				//fmt.Println(resp.err)
+				messages = append(messages, fmt.Sprintf("%v", resp.err))
+			} else {
+				//fmt.Println("Index file response:,", resp.resp)
+				messages = append(messages, resp.resp)
+			}
+			<-sem
+		}(f)
+	}
+
+	for n := len(fileList); n > 0; n-- {
+		sem <- token{}
+	}
+
 	var buffer bytes.Buffer
 	count := 1
 	for _, message := range messages {
 		buffer.WriteString(strconv.Itoa(count))
 		buffer.WriteString(". ")
-		buffer.WriteString(message.Resp)
+		buffer.WriteString(message)
 		buffer.WriteString("\n")
 		count++
 	}
-
 	return buffer.String(), nil
 }
+
+// func process(ctx context.Context, file csvFile, suffix, index string) (string, error) {
+
+// 	messages := ingestFiles(s.client, fileList)
+// 	var buffer bytes.Buffer
+// 	count := 1
+// 	for _, message := range messages {
+// 		buffer.WriteString(strconv.Itoa(count))
+// 		buffer.WriteString(". ")
+// 		buffer.WriteString(message.Resp)
+// 		buffer.WriteString("\n")
+// 		count++
+// 	}
+
+// 	return buffer.String(), nil
+// }
 
 func csvFileList(file string) ([][]string, error) {
 	csvFile, err := os.Open(file)
@@ -176,24 +210,24 @@ func walkFileList(lines [][]string, suffix string) ([]csvLine, error) {
 	return csvLines, nil
 }
 
-func ingestFiles(client *elastic.Client, files []csvLine) []ingestResp {
-	responses := []ingestResp{}
-	for _, file := range files {
-		resp := indexFile(client, file)
-		responses = append(responses, resp)
-	}
-	return responses
-}
+// func ingestFiles(client *elastic.Client, files []csvLine) []ingestResp {
+// 	responses := []ingestResp{}
+// 	for _, file := range files {
+// 		resp := indexFile(client, file)
+// 		responses = append(responses, resp)
+// 	}
+// 	return responses
+// }
 
 func indexFile(client *elastic.Client, csvLine csvLine) ingestResp {
 	res := ingestResp{}
 	err := processIndex(client, csvLine)
 	if err != nil {
-		res.Err = err
-		res.Resp = string(fmt.Sprintf("ERROR file: %s\n %v", csvLine.source, err))
+		res.err = err
+		res.resp = string(fmt.Sprintf("ERROR file: %s\n %v", csvLine.source, err))
 		return res
 	}
-	res.Resp = string(fmt.Sprintf("file indexed: %s", csvLine.source))
+	res.resp = string(fmt.Sprintf("file indexed: %s", csvLine.source))
 	return res
 }
 
@@ -202,8 +236,8 @@ func processIndex(client *elastic.Client, csvLine csvLine) error {
 	if strings.HasPrefix(csvLine.source, "http") {
 		byteContents, err := scrapeHtml(csvLine.source)
 		if err != nil {
-			fmt.Printf("%v\n", err)
-			return err
+			//fmt.Printf("%v\n", err)
+			return fmt.Errorf("Error while scraping html, %v", err)
 		}
 
 		content := Content{Topic: csvLine.topic, Content: string(byteContents), Source: csvLine.source}
@@ -216,8 +250,8 @@ func processIndex(client *elastic.Client, csvLine csvLine) error {
 	} else {
 		byteContents, err := ioutil.ReadFile(csvLine.source)
 		if err != nil {
-			fmt.Printf("%v\n", err)
-			return err
+			//fmt.Printf("%v\n", err)
+			return fmt.Errorf("Error on reading file: %v", err)
 		}
 
 		content := Content{Topic: csvLine.topic, Content: string(byteContents), Source: csvLine.source}
@@ -231,6 +265,8 @@ func processIndex(client *elastic.Client, csvLine csvLine) error {
 }
 
 func addToIndex(client *elastic.Client, topic string, content Content) error {
+
+	time.Sleep(100 * time.Millisecond)
 
 	dataJSON, err := json.Marshal(content)
 	if err != nil {
@@ -246,7 +282,7 @@ func addToIndex(client *elastic.Client, topic string, content Content) error {
 		Refresh("true").
 		Do(context.Background())
 	if err != nil {
-		return err
+		return fmt.Errorf("Error on es indexing, %v", err)
 	}
 	return nil
 }

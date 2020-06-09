@@ -20,7 +20,7 @@ hanap:
 .PHONY: golang
 golang:  
 	hanap client destroy index -i golang
-	hanap client reindex file -f ./index_file_go.csv -i golang -s .go
+	GOMAXPROCS=4 hanap client reindex file -f ./index_file_go.csv -i golang -s .go
 
 .PHONY: web
 web:

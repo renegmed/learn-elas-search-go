@@ -3,8 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/renegmed/learn-elas-search-go/cmd/hanap/util"
-
+	"github.com/renegmed/learn-elas-search-go/cmd/hanap/searcher"
 	"github.com/spf13/cobra"
 )
 
@@ -33,7 +32,7 @@ var clientReindexCmd = &cobra.Command{
 			return
 		}
 
-		searcher, err := util.NewSearcher()
+		searcher, err := searcher.NewSearcher()
 		if err != nil {
 			fmt.Println(err)
 		}

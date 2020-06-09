@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/renegmed/learn-elas-search-go/cmd/hanap/util"
+	"github.com/renegmed/learn-elas-search-go/cmd/hanap/searcher"
 
 	"github.com/spf13/cobra"
 )
@@ -17,7 +17,7 @@ var clientSearchCmd = &cobra.Command{
 		index, _ := cmd.Flags().GetString("index")
 		phrase, _ := cmd.Flags().GetString("phrase")
 
-		searcher, err := util.NewSearcher()
+		searcher, err := searcher.NewSearcher()
 		if err != nil {
 			check(err)
 		}

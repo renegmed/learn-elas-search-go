@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/renegmed/learn-elas-search-go/cmd/hanap/util"
+	"github.com/renegmed/learn-elas-search-go/cmd/hanap/searcher"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gin-gonic/gin"
@@ -96,13 +96,12 @@ func RegisterRoutes() *gin.Engine {
 			IsGoPackage = true
 		}
 
-		searcher, err := util.NewSearcher()
+		searcher, err := searcher.NewSearcher()
 		if err != nil {
 			c.HTML(http.StatusOK, "error.html", nil)
 		}
 		files, err := searcher.Search(index, phrase, searchMethod)
 
-		//files, err := util.SearchWithReturn(index, phrase)
 		if err != nil {
 			c.HTML(http.StatusOK, "error.html", nil)
 		}

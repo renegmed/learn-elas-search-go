@@ -1,4 +1,4 @@
-package util
+package searcher
 
 import (
 	"bytes"
@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -19,8 +18,9 @@ import (
 	elastic "github.com/olivere/elastic/v7"
 )
 
-type Searcher struct {
-	client *elastic.Client
+type csvLine struct {
+	topic  string
+	source string
 }
 
 type ingestResp struct {
@@ -28,62 +28,7 @@ type ingestResp struct {
 	Err  error
 }
 
-func NewSearcher() (Searcher, error) {
-
-	client, err := elastic.NewClient()
-	if err != nil {
-		return Searcher{}, err
-	}
-	return Searcher{
-		client: client,
-	}, nil
-
-}
-func (s *Searcher) Search(index, phrase string, searchMethod string) ([]string, error) {
-
-	var termQuery elastic.Query
-
-	if strings.Contains(searchMethod, "prefix") {
-		termQuery = elastic.NewMatchPhrasePrefixQuery("content", phrase)
-	} else if strings.Contains(searchMethod, "fuzzy") {
-		termQuery = elastic.NewFuzzyQuery("content", phrase).Boost(1.5).Fuzziness(2).PrefixLength(0).MaxExpansions(100)
-	} else {
-		// all words must belong to a document
-		words := strings.Split(strings.Trim(phrase, " "), " ")
-		fmt.Printf("++++ words: %v\n", words)
-
-		tQuery := elastic.NewBoolQuery()
-
-		for _, word := range words {
-			termQuery = tQuery.Must(elastic.NewTermQuery("content", word))
-		}
-	}
-
-	//termQuery := elastic.NewMatchPhraseQuery("content", phrase)
-
-	searchResult, err := s.client.Search().
-		Index(index).     // search in index "tweets"
-		Query(termQuery). // specify the query
-		//Sort("topic.keyword", true). // sort by "topic" field, ascending
-		From(0).Size(2000).      // take documents 0-9
-		Pretty(true).            // pretty print request and response JSON
-		Do(context.Background()) // execute
-	if err != nil {
-		return nil, err
-	}
-
-	sourceList := []string{}
-
-	var ttyp Content
-	for _, item := range searchResult.Each(reflect.TypeOf(ttyp)) {
-		if c, ok := item.(Content); ok {
-			sourceList = append(sourceList, c.Source)
-		}
-	}
-	return sourceList, nil
-}
-
-func (s *Searcher) Destroy(index string) error {
+func (s *searcher) Destroy(index string) error {
 	ctx := context.Background()
 
 	exists, err := s.client.IndexExists(index).Do(ctx)
@@ -104,9 +49,9 @@ func (s *Searcher) Destroy(index string) error {
 	return nil
 }
 
-func (s *Searcher) Reindex(file, suffix, index string) (string, error) {
+func (s *searcher) Reindex(file, suffix, index string) (string, error) {
 
-	var fileList []CsvLine
+	var fileList []csvLine
 	csvFileList, err := csvFileList(file)
 	if err != nil {
 		return "", err
@@ -173,19 +118,19 @@ func csvFileList(file string) ([][]string, error) {
 	return lines, nil
 }
 
-func convertFileList(lines [][]string) []CsvLine {
-	csvLines := make([]CsvLine, 0)
+func convertFileList(lines [][]string) []csvLine {
+	csvLines := make([]csvLine, 0)
 
 	for _, line := range lines[1:] { // skip first line
-		data := new(CsvLine)
-		data.Topic = line[0]
-		data.Source = strings.TrimSpace(line[1])
-		csvLines = append(csvLines, *data)
+		data := csvLine{}
+		data.topic = line[0]
+		data.source = strings.TrimSpace(line[1])
+		csvLines = append(csvLines, data)
 	}
 	return csvLines
 }
-func walkFileList(lines [][]string, suffix string) ([]CsvLine, error) {
-	csvLines := make([]CsvLine, 0)
+func walkFileList(lines [][]string, suffix string) ([]csvLine, error) {
+	csvLines := make([]csvLine, 0)
 
 	for _, line := range lines[1:] { // skip first line
 
@@ -222,16 +167,16 @@ func walkFileList(lines [][]string, suffix string) ([]CsvLine, error) {
 			return nil, err
 		}
 		for _, file := range fileList {
-			data := new(CsvLine)
-			data.Topic = line[0]
-			data.Source = file
-			csvLines = append(csvLines, *data)
+			data := csvLine{}
+			data.topic = line[0]
+			data.source = file
+			csvLines = append(csvLines, data)
 		}
 	}
 	return csvLines, nil
 }
 
-func ingestFiles(client *elastic.Client, files []CsvLine) []ingestResp {
+func ingestFiles(client *elastic.Client, files []csvLine) []ingestResp {
 	responses := []ingestResp{}
 	for _, file := range files {
 		resp := indexFile(client, file)
@@ -240,44 +185,44 @@ func ingestFiles(client *elastic.Client, files []CsvLine) []ingestResp {
 	return responses
 }
 
-func indexFile(client *elastic.Client, csvLine CsvLine) ingestResp {
+func indexFile(client *elastic.Client, csvLine csvLine) ingestResp {
 	res := ingestResp{}
 	err := processIndex(client, csvLine)
 	if err != nil {
 		res.Err = err
-		res.Resp = string(fmt.Sprintf("ERROR file: %s\n %v", csvLine.Source, err))
+		res.Resp = string(fmt.Sprintf("ERROR file: %s\n %v", csvLine.source, err))
 		return res
 	}
-	res.Resp = string(fmt.Sprintf("file indexed: %s", csvLine.Source))
+	res.Resp = string(fmt.Sprintf("file indexed: %s", csvLine.source))
 	return res
 }
 
-func processIndex(client *elastic.Client, csvLine CsvLine) error {
+func processIndex(client *elastic.Client, csvLine csvLine) error {
 
-	if strings.HasPrefix(csvLine.Source, "http") {
-		byteContents, err := scrapeHtml(csvLine.Source)
+	if strings.HasPrefix(csvLine.source, "http") {
+		byteContents, err := scrapeHtml(csvLine.source)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 			return err
 		}
 
-		content := Content{Topic: csvLine.Topic, Content: string(byteContents), Source: csvLine.Source}
+		content := Content{Topic: csvLine.topic, Content: string(byteContents), Source: csvLine.source}
 
-		err = addToIndex(client, csvLine.Topic, content)
+		err = addToIndex(client, csvLine.topic, content)
 		if err != nil {
 			return fmt.Errorf("Error on add http document to index, %v", err)
 		}
 
 	} else {
-		byteContents, err := ioutil.ReadFile(csvLine.Source)
+		byteContents, err := ioutil.ReadFile(csvLine.source)
 		if err != nil {
 			fmt.Printf("%v\n", err)
 			return err
 		}
 
-		content := Content{Topic: csvLine.Topic, Content: string(byteContents), Source: csvLine.Source}
+		content := Content{Topic: csvLine.topic, Content: string(byteContents), Source: csvLine.source}
 
-		err = addToIndex(client, csvLine.Topic, content)
+		err = addToIndex(client, csvLine.topic, content)
 		if err != nil {
 			return fmt.Errorf("Error on add file document to index, %v", err)
 		}

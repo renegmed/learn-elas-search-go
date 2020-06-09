@@ -1,9 +1,6 @@
-package util
+package searcher
 
-type CsvLine struct {
-	Topic  string
-	Source string
-}
+import elastic "github.com/olivere/elastic/v7"
 
 type Content struct {
 	Topic   string `json:"topic"`
@@ -27,6 +24,20 @@ const Mapping = `
 		}
 	 }
 }`
+
+type searcher struct {
+	client *elastic.Client
+}
+
+func NewSearcher() (searcher, error) {
+	client, err := elastic.NewClient()
+	if err != nil {
+		return searcher{}, err
+	}
+	return searcher{
+		client: client,
+	}, nil
+}
 
 func check(e error) {
 	if e != nil {

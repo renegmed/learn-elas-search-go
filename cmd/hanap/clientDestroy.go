@@ -1,8 +1,7 @@
 package main
 
 import (
-	"github.com/renegmed/learn-elas-search-go/cmd/hanap/util"
-
+	"github.com/renegmed/learn-elas-search-go/cmd/hanap/searcher"
 	"github.com/spf13/cobra"
 )
 
@@ -16,12 +15,12 @@ var clientDestroyCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		index, _ := cmd.Flags().GetString("index")
 
-		searcher, err := util.NewSearcher()
+		searcher, err := searcher.NewSearcher()
 		if err != nil {
 			check(err)
 		}
 		err = searcher.Destroy(index)
-		//err := util.Destroy(index)
+		//err := searcher.Destroy(index)
 		check(err)
 	},
 }

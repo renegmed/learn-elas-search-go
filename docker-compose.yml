@@ -15,7 +15,7 @@ services:
         soft: -1
         hard: -1
     volumes:
-      - ./esdata01:/elasticsearch/data
+      - ./esdata/esdata01:/elasticsearch/data
     ports:
       - 9200:9200
     networks:
@@ -36,7 +36,7 @@ services:
         soft: -1
         hard: -1
     volumes:
-      - ./esdata02:/elasticsearch/data
+      - ./esdata/esdata02:/elasticsearch/data
     ports:
       - 9201:9201
     networks:
@@ -57,7 +57,7 @@ services:
         soft: -1
         hard: -1
     volumes:
-      - ./esdata03:/elasticsearch/data
+      - ./esdata/esdata03:/elasticsearch/data
     ports:
       - 9202:9202
     networks:

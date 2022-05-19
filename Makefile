@@ -8,9 +8,6 @@ up:
 
 down:
 	docker-compose down 
- 
-
-
 
 # ----- web ------
 
@@ -38,8 +35,8 @@ install_app:  # build and install to $GOPATH/bin, no need to call ./hanap
 	go install ./cmd/hanap
 	 
 index_golang:  
-	./hanap client destroy index -i golang
-	GOMAXPROCS=4 hanap client reindex file -f ./cvs-files/test-data/index_file_go.csv -i golang -s .go
+	hanap client destroy index -i golang
+	GOMAXPROCS=4 ./hanap client reindex file -f ./cvs-files/test-data/index_file_go.csv -i golang -s .go
  	#GOMAXPROCS=4 hanap client reindex file -f ./cvs-files/index_file_go.csv -i golang -s .go
 index_web:
 	hanap client destroy index -i web

@@ -3,7 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/renegmed/learn-elas-search-go/cmd/hanap/searcher"
+	"github.com/renegmed/learn-elas-search-go/pkg/searcher"
+	"github.com/renegmed/learn-elas-search-go/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -22,25 +23,26 @@ var clientReindexCmd = &cobra.Command{
 
 		indx, err := cmd.Flags().GetString("index")
 		if err != nil {
-			fmt.Println(err)
+			utils.Error(err)
 			return
 		}
 
 		suffix, err := cmd.Flags().GetString("suffix")
 		if err != nil {
-			fmt.Println(err)
+			utils.Error(err)
 			return
 		}
 
 		searcher, err := searcher.NewSearcher()
 		if err != nil {
-			fmt.Println(err)
+			utils.Error(err)
+			return
 		}
 
 		//result, err := searcher.Reindex(f, ".go", "golang")
 		result, err := searcher.Reindex(f, suffix, indx)
 		if err != nil {
-			fmt.Printf("Error while reindex %s, %v\n", indx, err)
+			fmt.Printf("Error while reindex %s, %v\n", indx, utils.Error(err))
 		} else {
 			fmt.Printf("RESULT of reindexing, %s\n", result)
 		}

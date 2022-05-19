@@ -1,0 +1,1 @@
+{"buildTargets":["build-cli","build-web","down","golang","gopackage","hanap","init-project","kubernetes","note","pdf","run-cli","run-web","rust","solidity","up","web"],"launchTargets":[],"customConfigurationProvider":{"workspaceBrowse":{"browsePath":[],"compilerArgs":[]},"fileIndex":[]}}

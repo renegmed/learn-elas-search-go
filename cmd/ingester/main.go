@@ -61,7 +61,7 @@ func init() {
 		Use:   "hanap",
 		Short: "Search application for finding application source code files",
 	}
-	rootCmd.AddCommand(serverCmd)
+	//rootCmd.AddCommand(serverCmd)
 	rootCmd.AddCommand(clientCmd)
 
 	// viper.SetDefault("location", os.Getenv("HOME"))

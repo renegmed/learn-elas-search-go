@@ -1,7 +1,10 @@
 *.txt
 vendor
 web.exe
-hanapweb.exe 
+hanap
 index_file*
 .DS_Store
 esdata*
+persistent-data
+config 
+

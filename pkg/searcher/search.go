@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	elastic "github.com/olivere/elastic/v7"
+	"github.com/renegmed/learn-elas-search-go/pkg/utils"
 )
 
 func (s *searcher) Search(index, phrase string, searchMethod string) ([]string, error) {
@@ -39,7 +40,7 @@ func (s *searcher) Search(index, phrase string, searchMethod string) ([]string, 
 		Pretty(true).            // pretty print request and response JSON
 		Do(context.Background()) // execute
 	if err != nil {
-		return nil, err
+		return nil, utils.Error(err)
 	}
 
 	sourceList := []string{}

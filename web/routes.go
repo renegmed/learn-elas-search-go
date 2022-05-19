@@ -1,8 +1,10 @@
-package web
+package main
 
 import (
 	"bytes"
+	"embed"
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -11,11 +13,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/renegmed/learn-elas-search-go/cmd/hanap/searcher"
-
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gin-gonic/gin"
 	pdf "github.com/ledongthuc/pdf"
+	"github.com/renegmed/learn-elas-search-go/pkg/searcher"
 )
 
 type content struct {
@@ -43,11 +44,12 @@ type header struct {
 	IsGoPackage  bool
 }
 
-func RegisterRoutes() *gin.Engine {
+func RegisterRoutes(htmltemplate *embed.FS) *gin.Engine {
 
 	r := gin.Default()
 
-	r.LoadHTMLGlob("templates/**/*.html")
+	templ := template.Must(template.New("").ParseFS(htmltemplate, "templates/views/*.html", "templates/includes/*.html"))
+	r.SetHTMLTemplate(templ)
 
 	r.GET("/", func(c *gin.Context) {
 		pdfFiles, _ := c.GetPostFormMap("pdfFile")

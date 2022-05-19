@@ -1,6 +1,9 @@
-package searcher
+package ingester
 
-import elastic "github.com/olivere/elastic/v7"
+import (
+	elastic "github.com/olivere/elastic/v7"
+	"github.com/renegmed/learn-elas-search-go/pkg/utils"
+)
 
 type Content struct {
 	Topic   string `json:"topic"`
@@ -32,7 +35,7 @@ type searcher struct {
 func NewSearcher() (searcher, error) {
 	client, err := elastic.NewClient()
 	if err != nil {
-		return searcher{}, err
+		return searcher{}, utils.Error(err)
 	}
 	return searcher{
 		client: client,

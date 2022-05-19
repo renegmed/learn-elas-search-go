@@ -3,7 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/renegmed/learn-elas-search-go/cmd/hanap/searcher"
+	"github.com/renegmed/learn-elas-search-go/pkg/searcher"
+	"github.com/renegmed/learn-elas-search-go/pkg/utils"
 
 	"github.com/spf13/cobra"
 )
@@ -19,11 +20,11 @@ var clientSearchCmd = &cobra.Command{
 
 		searcher, err := searcher.NewSearcher()
 		if err != nil {
-			check(err)
+			check(utils.Error(err))
 		}
 		fileList, err := searcher.Search(index, phrase, "default")
 		if err != nil {
-			check(err)
+			check(utils.Error(err))
 		}
 		for i, fileName := range fileList {
 			fmt.Printf("FILE: %d. %s\n", i+1, fileName)

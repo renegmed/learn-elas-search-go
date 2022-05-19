@@ -1,0 +1,5 @@
+make --dry-run --always-make --keep-going --print-directory
+make: Entering directory '/home/renemed/programming/go-workspace/src/applications/hanap'
+go mod init github.com/renegmed/learn-elas-search-go
+make: Leaving directory '/home/renemed/programming/go-workspace/src/applications/hanap'
+ 

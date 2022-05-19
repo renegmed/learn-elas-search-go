@@ -1,7 +1,8 @@
 package main
 
 import (
-	"github.com/renegmed/learn-elas-search-go/cmd/hanap/searcher"
+	"github.com/renegmed/learn-elas-search-go/pkg/searcher"
+	"github.com/renegmed/learn-elas-search-go/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -17,11 +18,11 @@ var clientDestroyCmd = &cobra.Command{
 
 		searcher, err := searcher.NewSearcher()
 		if err != nil {
-			check(err)
+			check(utils.Error(err))
 		}
 		err = searcher.Destroy(index)
 		//err := searcher.Destroy(index)
-		check(err)
+		check(utils.Error(err))
 	},
 }
 

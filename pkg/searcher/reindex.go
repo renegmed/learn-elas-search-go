@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/renegmed/learn-elas-search-go/pkg/utils"
+
 	elastic "github.com/olivere/elastic/v7"
 )
 
@@ -34,14 +36,14 @@ func (s *searcher) Destroy(index string) error {
 
 	exists, err := s.client.IndexExists(index).Do(ctx)
 	if err != nil {
-		return err
+		return utils.Error(err)
 	}
 
 	if exists {
 		// Delete an index.
 		deleteIndex, err := s.client.DeleteIndex(index).Do(ctx)
 		if err != nil {
-			check(err)
+			check(utils.Error(err))
 		}
 		if !deleteIndex.Acknowledged {
 			// Not acknowledged
@@ -54,13 +56,13 @@ func (s *searcher) Reindex(file, suffix, index string) (string, error) {
 	ctx := context.Background()
 	exists, err := s.client.IndexExists(index).Do(ctx)
 	if err != nil {
-		return "", fmt.Errorf("Error on checking existence of index, %v", err)
+		return "", utils.Error(fmt.Errorf("Error on checking existence of index, %v", err))
 	}
 
 	if !exists {
 		createIndex, err := s.client.CreateIndex(index).Body(Mapping).Do(ctx)
 		if err != nil {
-			return "", fmt.Errorf("Error on creating new index, %v", err)
+			return "", utils.Error(fmt.Errorf("Error on creating new index, %v", err))
 		}
 		if !createIndex.Acknowledged {
 			// Not acknowledged
@@ -69,18 +71,18 @@ func (s *searcher) Reindex(file, suffix, index string) (string, error) {
 
 	exists, err = s.client.IndexExists(index).Do(ctx)
 	if err != nil {
-		return "", fmt.Errorf("Error 2 on checking existence of index, %v", err)
+		return "", utils.Error(fmt.Errorf("Error 2 on checking existence of index, %v", err))
 	}
 
 	var fileList []csvLine
 	csvFileList, err := csvFileList(file)
 	if err != nil {
-		return "", err
+		return "", utils.Error(err)
 	}
 	if suffix != "web" {
 		fileList, err = walkFileList(csvFileList, suffix)
 		if err != nil {
-			return "", err
+			return "", utils.Error(err)
 		}
 	} else {
 		fileList = convertFileList(csvFileList)
@@ -184,12 +186,12 @@ func BatchCsvLine(cline <-chan csvLine, maxItems int, maxTimeout time.Duration) 
 func csvFileList(file string) ([][]string, error) {
 	csvFile, err := os.Open(file)
 	if err != nil {
-		return nil, err
+		return nil, utils.Error(err)
 	}
 	defer csvFile.Close()
 	lines, err := csv.NewReader(csvFile).ReadAll()
 	if err != nil {
-		return nil, err
+		return nil, utils.Error(err)
 	}
 
 	return lines, nil
@@ -242,7 +244,7 @@ func walkFileList(lines [][]string, suffix string) ([]csvLine, error) {
 			return nil
 		})
 		if err != nil {
-			return nil, err
+			return nil, utils.Error(err)
 		}
 		for _, file := range fileList {
 			data := csvLine{}
@@ -260,7 +262,7 @@ func indexFile(client *elastic.Client, csvLine csvLine) ingestResp {
 	res := ingestResp{}
 	msg, err := processIndex(client, csvLine)
 	if err != nil {
-		res.err = err
+		res.err = utils.Error(err)
 		res.resp = string(fmt.Sprintf("ERROR file: %s\n %v", csvLine.source, err))
 		return res
 	}
@@ -277,14 +279,14 @@ func processIndex(client *elastic.Client, csvLine csvLine) (string, error) {
 		byteContents, err := scrapeHtml(csvLine.source)
 		if err != nil {
 			//fmt.Printf("%v\n", err)
-			return "", fmt.Errorf("Error while scraping html, %v", err)
+			return "", utils.Error(fmt.Errorf("Error while scraping html, %v", err))
 		}
 
 		content := Content{Topic: csvLine.topic, Content: string(byteContents), Source: csvLine.source}
 
 		msg, err := addToIndex(client, csvLine.topic, content)
 		if err != nil {
-			return "", fmt.Errorf("Error on add http document to index, %v", err)
+			return "", utils.Error(fmt.Errorf("Error on add http document to index, %v", err))
 		}
 		return msg, nil
 
@@ -292,14 +294,14 @@ func processIndex(client *elastic.Client, csvLine csvLine) (string, error) {
 		byteContents, err := ioutil.ReadFile(csvLine.source)
 		if err != nil {
 			//fmt.Printf("%v\n", err)
-			return "", fmt.Errorf("Error on reading file: %v", err)
+			return "", utils.Error(fmt.Errorf("Error on reading file: %v", err))
 		}
 
 		content := Content{Topic: csvLine.topic, Content: string(byteContents), Source: csvLine.source}
 
 		msg, err := addToIndex(client, csvLine.topic, content)
 		if err != nil {
-			return "", fmt.Errorf("Error on add file document to index, %v", err)
+			return "", utils.Error(fmt.Errorf("Error on add file document to index, %v", err))
 		}
 
 		return msg, nil
@@ -315,7 +317,7 @@ func addToIndex(client *elastic.Client, topic string, content Content) (string, 
 
 	dataJSON, err := json.Marshal(content)
 	if err != nil {
-		return "", fmt.Errorf("Error on content marshalling, %v", err)
+		return "", utils.Error(fmt.Errorf("Error on content marshalling, %v", err))
 	}
 	js := string(dataJSON)
 
@@ -327,7 +329,7 @@ func addToIndex(client *elastic.Client, topic string, content Content) (string, 
 		Refresh("true").
 		Do(context.Background())
 	if err != nil {
-		return "", fmt.Errorf("Error on es indexing, %v", err)
+		return "", utils.Error(fmt.Errorf("Error on es indexing, %v", err))
 	}
 	return fmt.Sprintf("Added to index: %s", content.Source), nil
 }
@@ -335,17 +337,17 @@ func addToIndex(client *elastic.Client, topic string, content Content) (string, 
 func scrapeHtml(url string) (string, error) {
 	res, err := http.Get(url)
 	if err != nil {
-		return "", err
+		return "", utils.Error(err)
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
-		return "", fmt.Errorf("status code error: %d %s %s", res.StatusCode, res.Status, url)
+		return "", utils.Error(fmt.Errorf("status code error: %d %s %s", res.StatusCode, res.Status, url))
 	}
 
 	// Load the HTML document
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(utils.Error(err))
 	}
 
 	var textBuilder bytes.Buffer

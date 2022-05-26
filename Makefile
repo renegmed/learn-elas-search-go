@@ -24,6 +24,7 @@ run-web: build-web
 build-cli: 
 	#if [ -a ./hanap ]; then  rm ./hanap; fi;   # remove main if it exists 
 	go build -race -o ./hanap cmd/cli/*.go
+	#go build -gcflags="-m -m" -race -o ./hanap cmd/cli/*.go
 
 run-cli: build-cli
 	./hanap
@@ -34,10 +35,13 @@ run-cli: build-cli
 install_app:  # build and install to $GOPATH/bin, no need to call ./hanap
 	go install ./cmd/hanap
 	 
-index_golang:  
-	hanap client destroy index -i golang
-	GOMAXPROCS=4 ./hanap client reindex file -f ./cvs-files/test-data/index_file_go.csv -i golang -s .go
- 	#GOMAXPROCS=4 hanap client reindex file -f ./cvs-files/index_file_go.csv -i golang -s .go
+index_golang_destroy:
+	./hanap client destroy index -i golang
+
+index_golang:  index_golang_destroy
+	# ./hanap client destroy index -i golang
+	GOMAXPROCS=4 ./hanap client reindex file -f ./csv-files/test-data/index_file_go.csv -i golang -s .go
+ 	#GOMAXPROCS=4 hanap client reindex file -f ./csv-files/index_file_go.csv -i golang -s .go
 index_web:
 	hanap client destroy index -i web
 	hanap client reindex file -f ./index_file_web.csv -i web -s web
@@ -68,3 +72,6 @@ index_kubernetes:
 	hanap client destroy index -i kubernetes
 	hanap client reindex file -f ./index_file_kubernetes.csv -i kubernetes -s .yml	
 	hanap client reindex file -f ./index_file_kubernetes.csv -i kubernetes -s .yaml
+
+# --------- profiling ------------
+

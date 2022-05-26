@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -51,8 +50,8 @@ func (s *searcher) Destroy(index string) error {
 	return nil
 }
 
-func (s *searcher) Reindex(file, suffix, index string) (string, error) {
-	ctx := context.Background()
+func (s *searcher) Reindex(file, suffix, index string) (string, error) { // file suffix e.g. .go
+	ctx, _ := context.WithTimeout(context.Background(), 30_000*time.Millisecond)
 	exists, err := s.client.IndexExists(index).Do(ctx)
 	if err != nil {
 		return "", utils.Error(fmt.Errorf("Error on checking existence of index, %v", err))
@@ -78,8 +77,10 @@ func (s *searcher) Reindex(file, suffix, index string) (string, error) {
 	if err != nil {
 		return "", utils.Error(err)
 	}
+
+	fmt.Println("...suffix:", suffix)
 	if suffix != "web" {
-		fileList, err = walkFileList(csvFileList, suffix)
+		fileList, err = walkFileList(s.client, csvFileList, suffix)
 		if err != nil {
 			return "", utils.Error(err)
 		}
@@ -87,100 +88,163 @@ func (s *searcher) Reindex(file, suffix, index string) (string, error) {
 		fileList = convertFileList(csvFileList)
 	}
 
-	fmt.Println("Point 0....file size..", len(fileList))
+	fmt.Println("Point 100....file size..", len(fileList))
 
-	type token struct{}
+	return "", nil
 
-	sem := make(chan token, len(fileList))
-	batches := make(chan csvLine, len(fileList))
+	// 	type token struct{}
 
-	for i, f := range fileList {
-		go func(cline csvLine, i int, limit int) {
-			batches <- cline
-			sem <- token{}
-		}(f, i, len(fileList)-1)
-	}
+	// 	sem := make(chan token, len(fileList))
+	// 	batches := make(chan csvLine, len(fileList))
 
-	for i := len(fileList); i >= 0; i-- {
-		if i > 0 {
-			<-sem
-		} else {
-			close(batches)
-		}
-	}
+	// 	for i, f := range fileList {
+	// 		go func(cline csvLine, i int, limit int) {
+	// 			batches <- cline
+	// 			sem <- token{}
+	// 		}(f, i, len(fileList)-1)
+	// 	}
 
-	messages := []ingestResp{}
+	// 	for i := len(fileList); i >= 0; i-- {
+	// 		if i > 0 {
+	// 			<-sem
+	// 		} else {
+	// 			close(batches)
+	// 		}
+	// 	}
 
-	batches2 := BatchCsvLine(batches, 200, 60000*time.Millisecond)
-	for {
-		select {
-		case files, ok := <-batches2:
-			if ok {
-				for _, f := range files {
-					resp := indexFile(s.client, f)
-					messages = append(messages, resp)
-				}
+	// 	messages := []ingestResp{}
+
+	// 	batches2 := BatchCsvLine(batches, 200, 60000*time.Millisecond)
+	// 	for {
+	// 		select {
+	// 		case files, ok := <-batches2:
+	// 			if ok {
+	// 				for _, f := range files {
+	// 					resp := indexFile(s.client, f)
+	// 					messages = append(messages, resp)
+	// 				}
+	// 			} else {
+	// 				goto done
+	// 			}
+	// 		}
+	// 	}
+	// done:
+	// 	var buffer bytes.Buffer
+	// 	count := 1
+	// 	for _, message := range messages {
+	// 		buffer.WriteString(strconv.Itoa(count))
+	// 		buffer.WriteString(". ")
+	// 		if message.err != nil {
+	// 			buffer.WriteString(fmt.Sprintf("%v", message.err))
+	// 		} else {
+	// 			buffer.WriteString(message.resp)
+	// 		}
+
+	// 		buffer.WriteString("\n")
+	// 		count++
+	// 	}
+
+	// 	return buffer.String(), nil
+
+}
+
+func walkFileList(es *elastic.Client, lines [][]string, suffix string) ([]csvLine, error) {
+
+	fmt.Println("...walkFileList")
+	csvLines := make([]csvLine, 0)
+
+	for _, line := range lines[1:] { // skip first line, the header
+
+		searchDir := line[1] //--- 2nd column of csv file - directory path
+		fileList := []string{}
+		fmt.Println("...searchDir:", searchDir)
+		err := filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
+
+			// filter out directories
+			if strings.HasSuffix(path, "/vendor") {
+				return nil
+			}
+
+			if strings.Contains(path, "/vendor/") {
+				return nil
+			}
+
+			if strings.Contains(path, "/Godeps") {
+				return nil
+			}
+
+			if strings.Contains(path, "/node_modules") {
+				return nil
+			}
+
+			if strings.HasSuffix(searchDir, suffix) { // file suffix e.g. .go
+				fileList = append(fileList, path)
 			} else {
-				goto done
-			}
-		}
-	}
-done:
-	var buffer bytes.Buffer
-	count := 1
-	for _, message := range messages {
-		buffer.WriteString(strconv.Itoa(count))
-		buffer.WriteString(". ")
-		if message.err != nil {
-			buffer.WriteString(fmt.Sprintf("%v", message.err))
-		} else {
-			buffer.WriteString(message.resp)
-		}
+				if strings.HasSuffix(path, suffix) {
 
-		buffer.WriteString("\n")
-		count++
-	}
+					//------ ingest file content to elasticsearch ------//
 
-	return buffer.String(), nil
+					data := csvLine{}
+					data.topic = line[0]
+					data.source = line[1] //--- file name listed in cvs
 
-}
+					ingestResp := indexFile(es, data)
 
-func BatchCsvLine(cline <-chan csvLine, maxItems int, maxTimeout time.Duration) chan []csvLine {
-	batches := make(chan []csvLine)
+					fmt.Println("Ingest response:", ingestResp)
 
-	go func() {
-		defer close(batches) // stops receiving signal when the channel is closed
-		for keepGoing := true; keepGoing; {
-			var batch []csvLine
-			expire := time.After(maxTimeout) // expire is channel that receives a signal when timeout is reached
-			for {
-				select {
-				case value, ok := <-cline:
-					if !ok { // channel was closed
-						keepGoing = false // this flag causes to exit out of the loop
-						goto done
-					}
-
-					batch = append(batch, value)
-					if len(batch) == maxItems { // max is reached before timeout, done, send the batch now regardless of content
-						goto done
-					}
-
-				case <-expire: // timeout reached before reaching maximum items
-					keepGoing = false
-					goto done // causes to send batches to channel, but continue into the loop
 				}
 			}
-
-		done:
-			if len(batch) > 0 {
-				batches <- batch
-			}
+			return nil
+		})
+		if err != nil {
+			return nil, utils.Error(err)
 		}
-	}()
-
-	return batches
+		// for _, file := range fileList {
+		// 	data := csvLine{}
+		// 	data.topic = line[0]
+		// 	data.source = file //--- file name listed in cvs
+		// 	csvLines = append(csvLines, data)
+		// }
+	}
+	return csvLines, nil
 }
+
+// func BatchCsvLine(cline <-chan csvLine, maxItems int, maxTimeout time.Duration) chan []csvLine {
+// 	batches := make(chan []csvLine)
+
+// 	go func() {
+// 		defer close(batches) // stops receiving signal when the channel is closed
+// 		for keepGoing := true; keepGoing; {
+// 			var batch []csvLine
+// 			expire := time.After(maxTimeout) // expire is channel that receives a signal when timeout is reached
+// 			for {
+// 				select {
+// 				case value, ok := <-cline:
+// 					if !ok { // channel was closed
+// 						keepGoing = false // this flag causes to exit out of the loop
+// 						goto done
+// 					}
+
+// 					batch = append(batch, value)
+// 					if len(batch) == maxItems { // max is reached before timeout, done, send the batch now regardless of content
+// 						goto done
+// 					}
+
+// 				case <-expire: // timeout reached before reaching maximum items
+// 					keepGoing = false
+// 					goto done // causes to send batches to channel, but continue into the loop
+// 				}
+// 			}
+
+// 		done:
+// 			if len(batch) > 0 {
+// 				batches <- batch
+// 			}
+// 		}
+// 	}()
+
+// 	return batches
+// }
 
 func csvFileList(file string) ([][]string, error) {
 	csvFile, err := os.Open(file)
@@ -206,53 +270,6 @@ func convertFileList(lines [][]string) []csvLine {
 		csvLines = append(csvLines, data)
 	}
 	return csvLines
-}
-
-func walkFileList(lines [][]string, suffix string) ([]csvLine, error) {
-	csvLines := make([]csvLine, 0)
-
-	for _, line := range lines[1:] { // skip first line
-
-		searchDir := line[1]
-		fileList := []string{}
-		err := filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
-
-			if strings.HasSuffix(path, "/vendor") {
-				return nil
-			}
-
-			if strings.Contains(path, "/vendor/") {
-				return nil
-			}
-
-			if strings.Contains(path, "/Godeps") {
-				return nil
-			}
-
-			if strings.Contains(path, "/node_modules") {
-				return nil
-			}
-
-			if strings.HasSuffix(searchDir, suffix) {
-				fileList = append(fileList, path)
-			} else {
-				if strings.HasSuffix(path, suffix) {
-					fileList = append(fileList, path)
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			return nil, utils.Error(err)
-		}
-		for _, file := range fileList {
-			data := csvLine{}
-			data.topic = line[0]
-			data.source = file
-			csvLines = append(csvLines, data)
-		}
-	}
-	return csvLines, nil
 }
 
 func indexFile(client *elastic.Client, csvLine csvLine) ingestResp {
@@ -290,6 +307,8 @@ func processIndex(client *elastic.Client, csvLine csvLine) (string, error) {
 		return msg, nil
 
 	} else {
+		fmt.Println("...csvLine.source:", csvLine.source)
+
 		byteContents, err := ioutil.ReadFile(csvLine.source)
 		if err != nil {
 			//fmt.Printf("%v\n", err)
@@ -298,7 +317,7 @@ func processIndex(client *elastic.Client, csvLine csvLine) (string, error) {
 
 		content := Content{Topic: csvLine.topic, Content: string(byteContents), Source: csvLine.source}
 
-		fmt.Println("-----content:\n", content)
+		//fmt.Println("-----content:\n", content)
 
 		msg, err := addToIndex(client, csvLine.topic, content)
 		if err != nil {

@@ -11,9 +11,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
+	"runtime"
 	"strings"
-	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/renegmed/learn-elas-search-go/pkg/utils"
@@ -29,6 +28,28 @@ type csvLine struct {
 type ingestResp struct {
 	resp string
 	err  error
+}
+
+type workDispatcher struct {
+	numOfWorkers int
+	taskChan     chan string
+	stopChan     chan struct{}
+}
+
+func (d *workDispatcher) Dispatch(filename string) {
+	d.taskChan <- filename
+}
+
+func NewWorkDispatcher(
+	num_of_workers int,
+	taskCh chan string,
+	stopCh chan struct{}) *workDispatcher {
+
+	return &workDispatcher{
+		numOfWorkers: num_of_workers,
+		taskChan:     taskCh,
+		stopChan:     stopCh,
+	}
 }
 
 func (s *searcher) Destroy(index string) error {
@@ -80,7 +101,13 @@ func (s *searcher) Reindex(file, suffix, index string) (string, error) {
 		return "", utils.Error(err)
 	}
 	if suffix != "web" {
-		fileList, err = walkFileList(csvFileList, suffix)
+		num_of_workers := runtime.NumCPU() - 2
+		taskCh := make(chan string)
+		stopCh := make(chan struct{})
+
+		wd := NewWorkDispatcher(num_of_workers, taskCh, stopCh)
+
+		fileList, err = walkFileList(s.client, csvFileList, suffix, wd)
 		if err != nil {
 			return "", utils.Error(err)
 		}
@@ -90,97 +117,7 @@ func (s *searcher) Reindex(file, suffix, index string) (string, error) {
 
 	fmt.Println("Point 0....file size..", len(fileList))
 
-	type token struct{}
-
-	sem := make(chan token, len(fileList))
-	batches := make(chan csvLine, len(fileList))
-
-	for i, f := range fileList {
-		go func(cline csvLine, i int, limit int) {
-			batches <- cline
-			sem <- token{}
-		}(f, i, len(fileList)-1)
-	}
-
-	for i := len(fileList); i >= 0; i-- {
-		if i > 0 {
-			<-sem
-		} else {
-			close(batches)
-		}
-	}
-
-	messages := []ingestResp{}
-
-	batches2 := BatchCsvLine(batches, 200, 60000*time.Millisecond)
-	for {
-		select {
-		case files, ok := <-batches2:
-			if ok {
-				for _, f := range files {
-					resp := indexFile(s.client, f)
-					messages = append(messages, resp)
-				}
-			} else {
-				goto done
-			}
-		}
-	}
-done:
-	var buffer bytes.Buffer
-	count := 1
-	for _, message := range messages {
-		buffer.WriteString(strconv.Itoa(count))
-		buffer.WriteString(". ")
-		if message.err != nil {
-			buffer.WriteString(fmt.Sprintf("%v", message.err))
-		} else {
-			buffer.WriteString(message.resp)
-		}
-
-		buffer.WriteString("\n")
-		count++
-	}
-
-	return buffer.String(), nil
-
-}
-
-func BatchCsvLine(cline <-chan csvLine, maxItems int, maxTimeout time.Duration) chan []csvLine {
-	batches := make(chan []csvLine)
-
-	go func() {
-		defer close(batches) // stops receiving signal when the channel is closed
-		for keepGoing := true; keepGoing; {
-			var batch []csvLine
-			expire := time.After(maxTimeout) // expire is channel that receives a signal when timeout is reached
-			for {
-				select {
-				case value, ok := <-cline:
-					if !ok { // channel was closed
-						keepGoing = false // this flag causes to exit out of the loop
-						goto done
-					}
-
-					batch = append(batch, value)
-					if len(batch) == maxItems { // max is reached before timeout, done, send the batch now regardless of content
-						goto done
-					}
-
-				case <-expire: // timeout reached before reaching maximum items
-					keepGoing = false
-					goto done // causes to send batches to channel, but continue into the loop
-				}
-			}
-
-		done:
-			if len(batch) > 0 {
-				batches <- batch
-			}
-		}
-	}()
-
-	return batches
+	return "", nil
 }
 
 func csvFileList(file string) ([][]string, error) {
@@ -209,7 +146,34 @@ func convertFileList(lines [][]string) []csvLine {
 	return csvLines
 }
 
-func walkFileList(lines [][]string, suffix string) ([]csvLine, error) {
+func walkFileList(
+	es *elastic.Client,
+	lines [][]string,
+	suffix string,
+	wd *workDispatcher) ([]csvLine, error) {
+
+	// setup the infrastructure
+
+	for i := 1; i <= wd.numOfWorkers; i++ {
+		go func(i int) {
+			for {
+				select {
+				case filename, ok := <-wd.taskChan:
+					if !ok {
+						return
+					}
+
+					data := csvLine{}
+					data.topic = lines[1][0] // 2nd row, 1st column value
+					data.source = filename   //--- file name listed in cvs
+					fmt.Printf("Worker: %d, Topic: %s, Source: %s\n", i, data.topic, data.source)
+					ingestResp := indexFile(es, data)
+					fmt.Println("INGEST RESP:", ingestResp)
+				}
+			}
+		}(i)
+	}
+
 	csvLines := make([]csvLine, 0)
 
 	for _, line := range lines[1:] { // skip first line
@@ -234,11 +198,29 @@ func walkFileList(lines [][]string, suffix string) ([]csvLine, error) {
 				return nil
 			}
 
+			// fmt.Println(" strings.HasSuffix(searchDir, suffix) -",
+			// 	strings.HasSuffix(searchDir, suffix))
+
 			if strings.HasSuffix(searchDir, suffix) {
 				fileList = append(fileList, path)
 			} else {
+
 				if strings.HasSuffix(path, suffix) {
+
+					//fmt.Println(path)
+
+					wd.taskChan <- path // this is the dispatcher
+
 					fileList = append(fileList, path)
+					//------ ingest file content to elasticsearch ------//
+
+					// data := csvLine{}
+					// data.topic = line[0]
+					// data.source = path //--- file name listed in cvs
+
+					// ingestResp := indexFile(es, data)
+
+					// fmt.Println("Ingest response:", ingestResp)
 				}
 			}
 			return nil
@@ -246,6 +228,7 @@ func walkFileList(lines [][]string, suffix string) ([]csvLine, error) {
 		if err != nil {
 			return nil, utils.Error(err)
 		}
+
 		for _, file := range fileList {
 			data := csvLine{}
 			data.topic = line[0]

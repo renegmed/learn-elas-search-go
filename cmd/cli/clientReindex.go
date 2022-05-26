@@ -44,7 +44,7 @@ var clientReindexCmd = &cobra.Command{
 		if err != nil {
 			fmt.Printf("Error while reindex %s, %v\n", indx, utils.Error(err))
 		} else {
-			fmt.Printf("RESULT of reindexing, %s\n", result)
+			fmt.Printf("RESULT of reindexing,\n %s\n", result)
 		}
 
 	},

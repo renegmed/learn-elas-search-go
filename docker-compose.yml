@@ -73,6 +73,38 @@ services:
       ELASTICSEARCH_HOSTS: http://es01:9200
     networks:
       - hanap
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    # volumes:
+    #   - grafana-storage:/var/lib/grafana
+  # golang:
+  #   build:
+  #     context: ./
+  #     dockerfile: Dockerfile
+  #   container_name: golang
+  #   restart: always
+  #   ports:
+  #     - '9000:9000'
+  prometheus:
+    container_name: prometheus
+    # image: prom/prometheus:v2.24.0
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus/:/etc/prometheus/
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - 9090:9090
+    restart: always
  
 volumes:
   esdata01:
@@ -81,6 +113,8 @@ volumes:
     driver: local
   esdata03:
     driver: local
+  grafana-storage:
+  prometheus_data: 
 
 networks:
   hanap:

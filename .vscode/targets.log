@@ -1,6 +1,4 @@
 make all --print-data-base --no-builtin-variables --no-builtin-rules --question
-make: *** No rule to make target 'all'.  Stop.
-
 # GNU Make 4.3
 # Built for x86_64-pc-linux-gnu
 # Copyright (C) 1988-2020 Free Software Foundation, Inc.
@@ -8,7 +6,7 @@ make: *** No rule to make target 'all'.  Stop.
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
-# Make data base, printed on Mon May 23 21:45:27 2022
+# Make data base, printed on Tue May 31 05:37:28 2022
 
 # Variables
 
@@ -25,7 +23,7 @@ GNOME_SHELL_SESSION_MODE = pop
 # environment
 SNAP_INSTANCE_KEY = 
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-85da7ca9-fe57-412e-9744-6baa5d59683f.sock
+VSCODE_IPC_HOOK_EXTHOST = /run/user/1000/vscode-ipc-d9d9f864-64d9-4e31-ae70-c81c3e055f2d.sock
 # environment
 LC_NAME = en_US.UTF-8
 # environment
@@ -81,7 +79,7 @@ XAUTHORITY = /run/user/1000/gdm/Xauthority
 # default
 .INCLUDE_DIRS = /usr/local/include /usr/include /usr/include
 # environment
-GNOME_TERMINAL_SERVICE = :1.12250
+GNOME_TERMINAL_SERVICE = :1.19589
 # makefile
 MAKEFLAGS = pqrR
 # makefile
@@ -117,7 +115,7 @@ SNAP_REEXEC =
 # environment
 VSCODE_VERBOSE_LOGGING = true
 # environment
-VSCODE_PID = 339241
+VSCODE_PID = 1685887
 # environment
 XDG_SESSION_TYPE = x11
 # automatic
@@ -147,7 +145,7 @@ XMODIFIERS = @im=ibus
 # environment
 SHLVL = 1
 # environment
-GNOME_TERMINAL_SCREEN = /org/gnome/Terminal/screen/120c7a05_8f05_4f08_8318_2571d8988a85
+GNOME_TERMINAL_SCREEN = /org/gnome/Terminal/screen/a9e854d5_4a05_4c6a_a277_7a4626171ef9
 # environment
 MAKELEVEL := 0
 # default
@@ -173,7 +171,7 @@ SNAP = /snap/code/97
 # environment
 GOROOT = /usr/local/go
 # environment
-INVOCATION_ID = 3f10208d70bd4f27b9098abbaf73f32f
+INVOCATION_ID = d4c0c3a398a5451ea6c6f9074d326c7a
 # environment
 SNAP_REVISION = 97
 # environment
@@ -245,7 +243,7 @@ GDK_PIXBUF_MODULE_FILE = /home/renemed/snap/code/common/.cache/gdk-pixbuf-loader
 # environment
 NVM_CD_FLAGS = 
 # environment
-JOURNAL_STREAM = 8:5021104
+JOURNAL_STREAM = 8:8374880
 # environment
 GOMODCACHE = /home/renemed/programming/go-workspace/pkg/mod
 # environment
@@ -278,13 +276,14 @@ GOPROXY = https://proxy.golang.org,direct
 SNAP_VERSION = c3511e6c
 # default
  
+make: *** No rule to make target 'all'.  Stop.
+
 SUFFIXES := 
 # environment
 VSCODE_CLI = 1
 # environment
 ELECTRON_NO_ATTACH_CONSOLE = 1
 # environment
- 
 VTE_VERSION = 6200
 # environment
 SNAP_COMMON = /var/snap/code/common
@@ -309,9 +308,9 @@ SNAP_LIBRARY_PATH = /var/lib/snapd/lib/gl:/var/lib/snapd/lib/gl32:/var/lib/snapd
 
 # Directories
 
-# . (device 64769, inode 10648824): 21 files, no impossibilities.
+# . (device 64769, inode 10648824): 22 files, no impossibilities.
 
-# 21 files, no impossibilities in 1 directories.
+# 22 files, no impossibilities in 1 directories.
 
 # Implicit Rules
 
@@ -345,7 +344,7 @@ index_pdf:
 # Not a target:
 Makefile:
 #  Implicit rule search has been done.
-#  Last modified 2022-05-19 11:24:25.586402265
+#  Last modified 2022-05-26 09:45:45.68503114
 #  File has been updated.
 #  Successfully updated.
 
@@ -459,12 +458,11 @@ index_solidity:
 build-cli:
 #  Implicit rule search has not been done.
 #  Modification time never checked.
- 
 #  File has not been updated.
 #  recipe to execute (from 'Makefile', line 25):
 	#if [ -a ./hanap ]; then  rm ./hanap; fi;   # remove main if it exists 
-	# go build -race -o ./hanap cmd/cli/*.go
-	go build -gcflags="-m -m" -race -o ./hanap cmd/cli/*.go
+	go build -race -o ./hanap cmd/cli/*.go
+	#go build -gcflags="-m -m" -race -o ./hanap cmd/cli/*.go
 
 down:
 #  Implicit rule search has not been done.
@@ -481,12 +479,12 @@ down:
 
 # No general ('VPATH' variable) search path.
 
-# strcache buffers: 1 (0) / strings = 43 / storage = 414 B / avg = 9 B
-# current buf: size = 8162 B / used = 414 B / count = 43 / avg = 9 B
+# strcache buffers: 1 (0) / strings = 44 / storage = 425 B / avg = 9 B
+# current buf: size = 8162 B / used = 425 B / count = 44 / avg = 9 B
 
-# strcache performance: lookups = 67 / hit rate = 35%
+# strcache performance: lookups = 68 / hit rate = 35%
 # hash-table stats:
-# Load=43/8192=1%, Rehash=0, Collisions=0/67=0%
-# Finished Make data base on Mon May 23 21:45:27 2022
+# Load=44/8192=1%, Rehash=0, Collisions=0/68=0%
+# Finished Make data base on Tue May 31 05:37:28 2022
 
  
